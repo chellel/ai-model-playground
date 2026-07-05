@@ -200,8 +200,8 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
 
     const effectiveWidget = field.widget || (
       (field.options && field.options.length > 0) || (field.enum && field.enum.length > 0) ? 'select' :
-      field.type === 'file' || field.format === 'uri' ? 'imageselect' :
-      field.type === 'array' && (field.items?.format === 'uri' || field.format === 'uri' || key.includes('image') || key.includes('video') || key.includes('file')) ? 'imageselect' :
+      field.type === 'file' || field.format === 'uri' ? 'fileselect' :
+      field.type === 'array' && (field.items?.format === 'uri' || field.format === 'uri' || key.includes('image') || key.includes('video') || key.includes('file')) ? 'fileselect' :
       field.type === 'boolean' ? 'switch' :
       field.type === 'integer' || field.type === 'number' ? 'input' :
       undefined
@@ -211,11 +211,11 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
       case 'textarea':
         return (
           <textarea
-            className="w-full p-3 border border-gray-300 focus:border-black rounded-lg text-sm bg-white focus:outline-none transition font-sans shadow-2xs leading-relaxed"
+            className="w-full p-3 border border-gray-300 focus:border-black rounded-lg text-sm bg-white focus:outline-none transition font-sans shadow-2xs leading-relaxed font-mono"
             rows={4}
-            value={value}
+            value={typeof value === 'object' && value !== null ? JSON.stringify(value, null, 2) : value}
             onChange={(e) => onChange(key, e.target.value)}
-            placeholder={field.placeholder || `Enter ${key}...`}
+            placeholder={field.placeholder || field.description || `Enter ${key}...`}
           />
         );
 
@@ -350,6 +350,7 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
           />
         );
 
+      case 'fileselect':
       case 'imageselect':
       case 'file':
       case 'multi-file':
@@ -435,9 +436,9 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
                   </label>
                   {field.required && <span className="text-red-500">*</span>}
                 </div>
-                {field.help && (
+                {(field.help || field.description) && (
                   <p className="text-xs text-gray-500 leading-relaxed max-w-sm">
-                    {field.help}
+                    {field.help || field.description}
                   </p>
                 )}
               </div>
@@ -473,10 +474,10 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
 
             {renderWidget(key, field)}
 
-            {field.help && (
+            {(field.help || field.description) && (
               <p className="text-xs text-gray-500 leading-relaxed flex items-start gap-1">
                 <HelpCircle className="w-3.5 h-3.5 text-gray-400 shrink-0 mt-0.5" />
-                <span>{field.help}</span>
+                <span>{field.help || field.description}</span>
               </p>
             )}
           </div>

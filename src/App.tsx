@@ -11,6 +11,7 @@ import { OutputPanel } from './components/OutputPanel';
 import { SchemaEditorModal } from './components/SchemaEditorModal';
 import { AdminConsole } from './components/AdminConsole';
 import { ApiTokenSelector } from './components/ApiTokenSelector';
+import { ChatPlayground } from './components/ChatPlayground';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<'playground' | 'console'>('playground');
@@ -220,19 +221,29 @@ export default function App() {
               </div>
             </div>
 
-            {/* Right Column Card: Model Preview Area matching prototype 2 */}
-            <div className="lg:col-span-7 bg-white border border-gray-200/80 rounded-2xl p-6 shadow-xs flex flex-col min-h-[640px]">
-              <div className="flex-1 flex flex-col">
-                <OutputPanel
-                  model={currentModel}
-                  isGenerating={isGenerating}
-                  logs={logs}
-                  elapsedSeconds={elapsedSeconds}
-                  outputUrl={outputUrl}
-                  outputType={currentModel.category === 'Video Generation' ? 'video' : 'image'}
-                  onTweak={() => setActiveTab('Form')}
+            {/* Right Column Card: Chat Dialog or Model Preview Area */}
+            <div className="lg:col-span-7 flex flex-col">
+              {currentModel.category === 'Language Model' ? (
+                <ChatPlayground
+                  currentModel={currentModel}
+                  formData={formData}
+                  onReset={handleResetForm}
                 />
-              </div>
+              ) : (
+                <div className="bg-white border border-gray-200/80 rounded-2xl p-6 shadow-xs flex flex-col min-h-[640px]">
+                  <div className="flex-1 flex flex-col">
+                    <OutputPanel
+                      model={currentModel}
+                      isGenerating={isGenerating}
+                      logs={logs}
+                      elapsedSeconds={elapsedSeconds}
+                      outputUrl={outputUrl}
+                      outputType={currentModel.category === 'Video Generation' ? 'video' : 'image'}
+                      onTweak={() => setActiveTab('Form')}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

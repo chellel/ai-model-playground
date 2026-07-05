@@ -5,6 +5,7 @@ export type WidgetType =
   | 'file' 
   | 'multi-file' 
   | 'imageselect'
+  | 'fileselect'
   | 'slider' 
   | 'select' 
   | 'radiogroup'

@@ -68,6 +68,18 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
   // Additional mock rows to match New API admin console screenshot exactly
   const mockTableData = [
     {
+      id: 'openai/gpt-5.4',
+      name: 'gpt-5.4',
+      typeMatch: '精确',
+      syncOfficial: '是',
+      desc: 'OpenAI 官方全新一代旗舰多模态大语言模型',
+      supplier: 'OpenAI',
+      tag: 'llm',
+      endpoint: 'openai',
+      channel: 'OpenAI | 旗舰多模态(1)',
+      status: 'enabled'
+    },
+    {
       id: 'gemini-3.1-flash-lite-image',
       name: 'gemini-3.1-flash-lite-image',
       typeMatch: '精确',
@@ -234,14 +246,14 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
       const derivedWidget = prop.widget || (
         prop.type === 'boolean' ? 'switch' :
         (prop.enum || prop.options) ? 'select' :
-        (prop.type === 'file' || prop.format === 'uri' || (prop.type === 'array' && (prop.items?.format === 'uri' || fieldKey.includes('image') || fieldKey.includes('video')))) ? 'imageselect' :
+        (prop.type === 'file' || prop.format === 'uri' || (prop.type === 'array' && (prop.items?.format === 'uri' || fieldKey.includes('image') || fieldKey.includes('video')))) ? 'fileselect' :
         prop.format === 'textarea' ? 'textarea' :
         'input'
       );
       const normalizedWidget = 
         derivedWidget === 'boolean' ? 'switch' :
         derivedWidget === 'number' || derivedWidget === 'text' ? 'input' :
-        derivedWidget === 'file' || derivedWidget === 'multi-file' ? 'imageselect' :
+        derivedWidget === 'file' || derivedWidget === 'multi-file' || derivedWidget === 'imageselect' ? 'fileselect' :
         derivedWidget;
 
       setEditingFieldKey(fieldKey);
@@ -289,7 +301,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
       type: widgetType === 'switch' ? 'boolean' :
             widgetType === 'slider' ? 'number' :
             (widgetType === 'select' || widgetType === 'radiogroup' || widgetType === 'textarea') ? 'string' :
-            widgetType === 'imageselect' ? 'string' :
+            (widgetType === 'imageselect' || widgetType === 'fileselect') ? 'string' :
             (fieldForm.type || 'string'),
       title: fieldForm.title || key,
       description: fieldForm.description,
@@ -311,7 +323,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
     }
     if (widgetType === 'textarea') {
       newProp.format = 'textarea';
-    } else if (widgetType === 'imageselect') {
+    } else if (widgetType === 'imageselect' || widgetType === 'fileselect') {
       newProp.format = 'uri';
     } else if (fieldForm.format) {
       newProp.format = fieldForm.format;
@@ -333,7 +345,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
       newProp.enum = validEnumItems.map(item => item.value.trim());
       newProp.enumNames = validEnumItems.map(item => item.label.trim() ? item.label.trim() : item.value.trim());
     }
-    if (fieldForm.type === 'array' || widgetType === 'imageselect') {
+    if (fieldForm.type === 'array' || widgetType === 'imageselect' || widgetType === 'fileselect') {
       newProp.items = { type: 'string', format: 'uri' };
     }
 
@@ -1179,18 +1191,18 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                     setFieldForm({
                       ...fieldForm,
                       widget: val,
-                      type: val === 'switch' ? 'boolean' : val === 'slider' ? 'number' : val === 'imageselect' ? 'string' : (val === 'select' || val === 'radiogroup' || val === 'textarea') ? 'string' : fieldForm.type
+                      type: val === 'switch' ? 'boolean' : val === 'slider' ? 'number' : (val === 'imageselect' || val === 'fileselect') ? 'string' : (val === 'select' || val === 'radiogroup' || val === 'textarea') ? 'string' : fieldForm.type
                     });
                   }}
                   className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 font-semibold text-gray-800 bg-white"
                 >
-                  <option value="slider">滑块 (slider) - 数值范围选择</option>
-                  <option value="input">输入框 (input) - 数值/文本输入</option>
-                  <option value="select">下拉选择 (select) - 单选枚举</option>
-                  <option value="radiogroup">单选按钮组 (radiogroup) - 单选枚举（视觉强调）</option>
-                  <option value="switch">开关 (switch) - 布尔值</option>
-                  <option value="textarea">多行文本 (textarea) - 长文本输入</option>
-                  <option value="imageselect">图片选择器 (imageselect) - 文件上传</option>
+                  <option value="slider">滑块 (slider)</option>
+                  <option value="input">输入框 (input)</option>
+                  <option value="select">下拉选择 (select)</option>
+                  <option value="radiogroup">单选按钮组 (radiogroup)</option>
+                  <option value="switch">开关 (switch)</option>
+                  <option value="textarea">多行文本 (textarea)</option>
+                  <option value="fileselect">文件上传 (fileselect)</option>
                 </select>
               </div>
 
