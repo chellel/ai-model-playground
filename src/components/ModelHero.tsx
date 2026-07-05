@@ -104,23 +104,6 @@ export const ModelHero: React.FC<ModelHeroProps> = ({
         <p className="text-gray-600 text-base md:text-lg max-w-2xl mx-auto leading-relaxed">
           {currentModel.description || "SSE streaming debug, visual parameter configuration and request body testing."}
         </p>
-
-        {/* Pricing & Performance summary row */}
-        <div className="flex flex-wrap justify-center items-center gap-6 mt-4 text-xs font-mono font-medium text-gray-500">
-          <div className="flex items-center gap-1.5 bg-white/80 border border-gray-200 px-3 py-1 rounded-full shadow-2xs">
-            <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Pricing: <strong className="text-gray-800">{currentModel.pricePerRun}</strong></span>
-          </div>
-          <div className="flex items-center gap-1.5 bg-white/80 border border-gray-200 px-3 py-1 rounded-full shadow-2xs">
-            <Zap className="w-3.5 h-3.5 text-amber-500" />
-            <span>Avg Latency: <strong className="text-gray-800">{currentModel.avgTime}</strong></span>
-          </div>
-          <div className="flex items-center gap-1.5 bg-white/80 border border-gray-200 px-3 py-1 rounded-full shadow-2xs">
-            <Shield className="w-3.5 h-3.5 text-blue-500" />
-            <span>Runs: <strong className="text-gray-800">{currentModel.runsCount}</strong></span>
-          </div>
-        </div>
-
         {/* Two CTAs matching prototype 2 */}
         <div className="flex flex-wrap justify-center items-center gap-4 mt-8">
           <button

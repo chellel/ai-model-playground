@@ -894,55 +894,46 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
             </div>
 
             {/* Drawer Body Scroll Area */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50/70">
-              {/* Card: 参数 Schema 与可视化字段构建 */}
-              <div className="bg-white border border-gray-200/80 rounded-2xl p-6 shadow-2xs">
-                <div className="flex flex-wrap items-center justify-between gap-3 mb-5 pb-4 border-b border-gray-100">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm shrink-0">
-                      <Sliders className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-base text-gray-900">多模态参数与 OpenAPI Schema 配置</h4>
-                      <p className="text-xs text-gray-500 mt-0.5">此处配置的控件将在多模态表单（图片、视频生成等）中实时渲染</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => {
-                        const otherModels = models.filter(m => m.id !== editingModel?.id);
-                        if (otherModels.length > 0) {
-                          setSourceModelId(otherModels[0].id);
-                        }
-                        setShowCopyModal(true);
-                      }}
-                      className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-200 text-xs font-bold hover:bg-blue-100 transition flex items-center gap-1.5 shadow-2xs"
-                    >
-                      <Copy className="w-3.5 h-3.5" />
-                      <span>复制其他模型参数配置</span>
-                    </button>
-                    <button
-                      onClick={handleLoadOfficialSeedanceSchema}
-                      className="px-3 py-1.5 rounded-lg bg-purple-50 text-purple-700 border border-purple-200 text-xs font-bold hover:bg-purple-100 transition flex items-center gap-1.5"
-                    >
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span>载入 Seedance 2.0 官方 11项完整 Schema（测试用）</span>
-                    </button>
-                  </div>
+            <div className="flex-1 overflow-y-auto p-6 bg-white space-y-5">
+              {/* Top Action Bar & Description */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-gray-100">
+                <p className="text-xs text-gray-500 font-medium">此处配置的控件将在多模态生成表单中作为动态 UI 控件实时渲染</p>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      const otherModels = models.filter(m => m.id !== editingModel?.id);
+                      if (otherModels.length > 0) {
+                        setSourceModelId(otherModels[0].id);
+                      }
+                      setShowCopyModal(true);
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-200 text-xs font-bold hover:bg-blue-100 transition flex items-center gap-1.5 shadow-2xs"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>复制其他模型参数配置</span>
+                  </button>
+                  <button
+                    onClick={handleLoadOfficialSeedanceSchema}
+                    className="px-3 py-1.5 rounded-lg bg-purple-50 text-purple-700 border border-purple-200 text-xs font-bold hover:bg-purple-100 transition flex items-center gap-1.5"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>载入 Seedance 2.0 官方 11项完整 Schema（测试用）</span>
+                  </button>
                 </div>
+              </div>
 
-                {/* Sub-tabs inside Schema Card */}
-                <div className="border-b border-gray-200 mb-5 flex items-center justify-between">
-                  <div className="flex gap-6 text-xs font-bold">
-                    <button
-                      onClick={() => setSchemaTab('visual')}
-                      className={`py-2.5 border-b-2 flex items-center gap-2 transition ${
-                        schemaTab === 'visual' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-900'
-                      }`}
-                    >
-                      <Sliders className="w-4 h-4" />
-                      <span>可视化构建器 (Visual Builder)</span>
-                    </button>
+              {/* Sub-tabs inside Schema Drawer */}
+              <div className="border-b border-gray-200 mb-5 flex items-center justify-between">
+                <div className="flex gap-6 text-xs font-bold">
+                  <button
+                    onClick={() => setSchemaTab('visual')}
+                    className={`py-2.5 border-b-2 flex items-center gap-2 transition ${
+                      schemaTab === 'visual' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-900'
+                    }`}
+                  >
+                    <Sliders className="w-4 h-4" />
+                    <span>可视化构建器 (Visual Builder)</span>
+                  </button>
                     <button
                       onClick={() => {
                         const requiredKeys = Object.keys(editingModel.properties).filter(
@@ -1066,7 +1057,6 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                     />
                   </div>
                 )}
-              </div>
             </div>
 
             {/* Drawer Footer matching screenshot exactly */}
@@ -1269,7 +1259,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                         />
                         <input
                           type="text"
-                          placeholder="例如: 宽屏 16:9 (可选)"
+                          placeholder="请输入"
                           value={item.label}
                           onChange={e => {
                             const newList = [...fieldForm.enumList];
