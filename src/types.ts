@@ -1,11 +1,15 @@
 export type WidgetType = 
   | 'textarea' 
   | 'text' 
+  | 'input'
   | 'file' 
   | 'multi-file' 
+  | 'imageselect'
   | 'slider' 
   | 'select' 
+  | 'radiogroup'
   | 'boolean' 
+  | 'switch'
   | 'number';
 
 export interface SchemaProperty {

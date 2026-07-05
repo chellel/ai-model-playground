@@ -93,34 +93,34 @@ export default function App() {
           if (next === 2) {
             setLogs(l => [...l, {
               timestamp: new Date().toLocaleTimeString(),
-              message: 'Loading checkpoint weights into VRAM...',
+              message: currentModel.category === 'Language Model' ? 'Parsing user instructions & initializing 256K context tree...' : 'Loading checkpoint weights into VRAM...',
               type: 'step'
             }]);
           } else if (next === 4) {
             setLogs(l => [...l, {
               timestamp: new Date().toLocaleTimeString(),
-              message: `Executing diffusion sampling steps (inference steps: ${formData.num_inference_steps || 30})...`,
+              message: currentModel.category === 'Language Model' ? `Executing CoT reasoning (effort: ${formData.reasoning_effort || 'medium'}) & real-time Web Search grounding...` : `Executing diffusion sampling steps (inference steps: ${formData.num_inference_steps || 30})...`,
               type: 'step'
             }]);
           } else if (next === 7) {
             setLogs(l => [...l, {
               timestamp: new Date().toLocaleTimeString(),
-              message: 'Applying audio-visual spatial synchronization...',
+              message: currentModel.category === 'Language Model' ? 'Synthesizing structured completion & verifying response format...' : 'Applying audio-visual spatial synchronization...',
               type: 'step'
             }]);
           } else if (next === 9) {
             setIsGenerating(false);
-            setOutputUrl(currentModel.sampleVideoUrl || currentModel.sampleImageUrl || 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&auto=format&fit=crop&q=80');
+            setOutputUrl(currentModel.sampleVideoUrl || currentModel.sampleImageUrl || (currentModel.category === 'Language Model' ? '' : 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&auto=format&fit=crop&q=80'));
             setLogs(l => [
               ...l,
               {
                 timestamp: new Date().toLocaleTimeString(),
-                message: `Generated artifact successfully in ${((Date.now() - startTime) / 1000).toFixed(1)}sec`,
+                message: currentModel.category === 'Language Model' ? `Language completion generated successfully in ${((Date.now() - startTime) / 1000).toFixed(1)}sec` : `Generated artifact successfully in ${((Date.now() - startTime) / 1000).toFixed(1)}sec`,
                 type: 'success'
               },
               {
                 timestamp: new Date().toLocaleTimeString(),
-                message: 'Downloading artifact payload (2.56MB) to client viewport.',
+                message: currentModel.category === 'Language Model' ? 'Response tokens streamed to client viewport (Speed: 164 tok/s).' : 'Downloading artifact payload (2.56MB) to client viewport.',
                 type: 'info'
               }
             ]);

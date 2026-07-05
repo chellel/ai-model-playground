@@ -36,6 +36,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
     key: string;
     title: string;
     type: string;
+    widget?: string;
     description: string;
     placeholder?: string;
     default: any;
@@ -44,12 +45,14 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
     maxLength?: number;
     minimum?: number;
     maximum?: number;
+    step?: number;
     xOrder: number;
     required: boolean;
   }>({
     key: '',
     title: '',
     type: 'string',
+    widget: 'input',
     description: '',
     placeholder: '',
     default: '',
@@ -228,19 +231,34 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
       if (initialEnumList.length === 0) {
         initialEnumList = [{ value: '', label: '' }];
       }
+      const derivedWidget = prop.widget || (
+        prop.type === 'boolean' ? 'switch' :
+        (prop.enum || prop.options) ? 'select' :
+        (prop.type === 'file' || prop.format === 'uri' || (prop.type === 'array' && (prop.items?.format === 'uri' || fieldKey.includes('image') || fieldKey.includes('video')))) ? 'imageselect' :
+        prop.format === 'textarea' ? 'textarea' :
+        'input'
+      );
+      const normalizedWidget = 
+        derivedWidget === 'boolean' ? 'switch' :
+        derivedWidget === 'number' || derivedWidget === 'text' ? 'input' :
+        derivedWidget === 'file' || derivedWidget === 'multi-file' ? 'imageselect' :
+        derivedWidget;
+
       setEditingFieldKey(fieldKey);
       setFieldForm({
         key: fieldKey,
         title: prop.title || fieldKey,
         type: prop.type || 'string',
+        widget: normalizedWidget,
         description: prop.description || '',
         placeholder: prop.placeholder || '',
         default: prop.default ?? '',
         format: prop.format || prop.items?.format || (prop.widget === 'file' || prop.widget === 'multi-file' ? 'uri' : ''),
         enumList: initialEnumList,
         maxLength: prop.maxLength,
-        minimum: prop.minimum,
-        maximum: prop.maximum,
+        minimum: prop.minimum ?? prop.min,
+        maximum: prop.maximum ?? prop.max,
+        step: prop.step ?? 1,
         xOrder: prop['x-order'] ?? 10,
         required: !!prop.required
       });
@@ -250,6 +268,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
         key: '',
         title: '',
         type: 'string',
+        widget: 'input',
         description: '',
         placeholder: '',
         default: '',
@@ -265,42 +284,57 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
   const handleSaveField = () => {
     if (!editingModel || !fieldForm.key.trim()) return;
     const key = fieldForm.key.trim();
+    const widgetType = fieldForm.widget || 'input';
     const newProp: any = {
-      type: fieldForm.type,
+      type: widgetType === 'switch' ? 'boolean' :
+            widgetType === 'slider' ? 'number' :
+            (widgetType === 'select' || widgetType === 'radiogroup' || widgetType === 'textarea') ? 'string' :
+            widgetType === 'imageselect' ? 'string' :
+            (fieldForm.type || 'string'),
       title: fieldForm.title || key,
       description: fieldForm.description,
+      widget: widgetType,
       'x-order': Number(fieldForm.xOrder) || 0,
       required: fieldForm.required
     };
-    if (fieldForm.placeholder) {
+    if (fieldForm.placeholder && widgetType !== 'switch') {
       newProp.placeholder = fieldForm.placeholder;
     }
-    if (fieldForm.default !== '' && fieldForm.default !== undefined) {
-      if (fieldForm.type === 'integer' || fieldForm.type === 'number') {
-        newProp.default = Number(fieldForm.default);
-      } else if (fieldForm.type === 'boolean') {
+    if (fieldForm.default !== '' && fieldForm.default !== undefined && fieldForm.default !== null) {
+      if (newProp.type === 'integer' || newProp.type === 'number') {
+        newProp.default = !isNaN(Number(fieldForm.default)) ? Number(fieldForm.default) : fieldForm.default;
+      } else if (newProp.type === 'boolean') {
         newProp.default = fieldForm.default === 'true' || fieldForm.default === true;
       } else {
         newProp.default = fieldForm.default;
       }
     }
-    if (fieldForm.format) {
+    if (widgetType === 'textarea') {
+      newProp.format = 'textarea';
+    } else if (widgetType === 'imageselect') {
+      newProp.format = 'uri';
+    } else if (fieldForm.format) {
       newProp.format = fieldForm.format;
-      if (fieldForm.format === 'uri') {
-        newProp.widget = fieldForm.type === 'array' ? 'multi-file' : 'file';
-      }
     }
     if (fieldForm.maxLength) newProp.maxLength = Number(fieldForm.maxLength);
-    if (fieldForm.minimum !== undefined && !isNaN(fieldForm.minimum)) newProp.minimum = Number(fieldForm.minimum);
-    if (fieldForm.maximum !== undefined && !isNaN(fieldForm.maximum)) newProp.maximum = Number(fieldForm.maximum);
+    if (fieldForm.minimum !== undefined && !isNaN(fieldForm.minimum)) {
+      newProp.minimum = Number(fieldForm.minimum);
+      if (widgetType === 'slider') newProp.min = Number(fieldForm.minimum);
+    }
+    if (fieldForm.maximum !== undefined && !isNaN(fieldForm.maximum)) {
+      newProp.maximum = Number(fieldForm.maximum);
+      if (widgetType === 'slider') newProp.max = Number(fieldForm.maximum);
+    }
+    if (widgetType === 'slider' && fieldForm.step !== undefined && !isNaN(fieldForm.step)) {
+      newProp.step = Number(fieldForm.step);
+    }
     const validEnumItems = (fieldForm.enumList || []).filter(item => item.value.trim() !== '');
-    if (validEnumItems.length > 0) {
+    if ((widgetType === 'select' || widgetType === 'radiogroup') && validEnumItems.length > 0) {
       newProp.enum = validEnumItems.map(item => item.value.trim());
       newProp.enumNames = validEnumItems.map(item => item.label.trim() ? item.label.trim() : item.value.trim());
     }
-    if (fieldForm.type === 'array') {
-      newProp.items = { type: 'string', format: fieldForm.format || 'uri' };
-      if (!newProp.widget) newProp.widget = 'multi-file';
+    if (fieldForm.type === 'array' || widgetType === 'imageselect') {
+      newProp.items = { type: 'string', format: 'uri' };
     }
 
     const updatedProps = { ...editingModel.properties };
@@ -932,7 +966,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                     }`}
                   >
                     <Sliders className="w-4 h-4" />
-                    <span>可视化构建器 (Visual Builder)</span>
+                    <span>配置</span>
                   </button>
                     <button
                       onClick={() => {
@@ -952,7 +986,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                       }`}
                     >
                       <Code className="w-4 h-4" />
-                      <span>JSON Schema 原文编辑</span>
+                      <span>JSON Schema</span>
                     </button>
                   </div>
 
@@ -1102,6 +1136,18 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                 />
               </div>
 
+              <div className="pt-0.5">
+                <label className="flex items-center gap-2.5 cursor-pointer font-bold text-gray-800 bg-gray-50/80 p-3 rounded-xl border border-gray-200">
+                  <input
+                    type="checkbox"
+                    checked={fieldForm.required}
+                    onChange={e => setFieldForm({ ...fieldForm, required: e.target.checked })}
+                    className="rounded w-4 h-4 text-blue-600"
+                  />
+                  <span>设置为必填字段</span>
+                </label>
+              </div>
+
               <div>
                 <label className="font-bold text-gray-700 block mb-1.5">显示名称</label>
                 <input
@@ -1114,49 +1160,10 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
               </div>
 
               <div>
-                <label className="font-bold text-gray-700 block mb-1.5">输入提示语 (Placeholder)</label>
-                <input
-                  type="text"
-                  placeholder="例如: Describe the video you want..."
-                  value={fieldForm.placeholder || ''}
-                  onChange={e => setFieldForm({ ...fieldForm, placeholder: e.target.value })}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-gray-700 block mb-1.5">数据类型</label>
-                <select
-                  value={fieldForm.type}
-                  onChange={e => setFieldForm({ ...fieldForm, type: e.target.value })}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 font-semibold"
-                >
-                  <option value="string">文本</option>
-                  <option value="integer">整数</option>
-                  <option value="number">浮点数</option>
-                  <option value="boolean">布尔开关</option>
-                  <option value="array">多媒体上传数组</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="font-bold text-gray-700 block mb-1.5">表单格式 / 格式约束</label>
-                <select
-                  value={fieldForm.format}
-                  onChange={e => setFieldForm({ ...fieldForm, format: e.target.value })}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-                >
-                  <option value="">普通文本框</option>
-                  <option value="uri">链接上传</option>
-                  <option value="textarea">多行长文本区域</option>
-                </select>
-              </div>
-
-              <div>
                 <label className="font-bold text-gray-700 block mb-1.5">说明描述</label>
                 <input
                   type="text"
-                  placeholder="该参数在前端模型广场向用户展示的提示信息"
+                  placeholder="该参数在前端表单向用户展示的提示说明"
                   value={fieldForm.description}
                   onChange={e => setFieldForm({ ...fieldForm, description: e.target.value })}
                   className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
@@ -1164,8 +1171,77 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
               </div>
 
               <div>
+                <label className="font-bold text-gray-700 block mb-1.5">参数组件控件类型</label>
+                <select
+                  value={fieldForm.widget || 'input'}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setFieldForm({
+                      ...fieldForm,
+                      widget: val,
+                      type: val === 'switch' ? 'boolean' : val === 'slider' ? 'number' : val === 'imageselect' ? 'string' : (val === 'select' || val === 'radiogroup' || val === 'textarea') ? 'string' : fieldForm.type
+                    });
+                  }}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 font-semibold text-gray-800 bg-white"
+                >
+                  <option value="slider">滑块 (slider) - 数值范围选择</option>
+                  <option value="input">输入框 (input) - 数值/文本输入</option>
+                  <option value="select">下拉选择 (select) - 单选枚举</option>
+                  <option value="radiogroup">单选按钮组 (radiogroup) - 单选枚举（视觉强调）</option>
+                  <option value="switch">开关 (switch) - 布尔值</option>
+                  <option value="textarea">多行文本 (textarea) - 长文本输入</option>
+                  <option value="imageselect">图片选择器 (imageselect) - 文件上传</option>
+                </select>
+              </div>
+
+              {fieldForm.widget === 'slider' && (
+                <div className="grid grid-cols-3 gap-2 p-3 bg-blue-50/60 rounded-xl border border-blue-100">
+                  <div>
+                    <label className="font-bold text-gray-700 block mb-1">最小值</label>
+                    <input
+                      type="number"
+                      value={fieldForm.minimum ?? 0}
+                      onChange={e => setFieldForm({ ...fieldForm, minimum: Number(e.target.value) })}
+                      className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 font-mono text-xs bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-gray-700 block mb-1">最大值</label>
+                    <input
+                      type="number"
+                      value={fieldForm.maximum ?? 100}
+                      onChange={e => setFieldForm({ ...fieldForm, maximum: Number(e.target.value) })}
+                      className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 font-mono text-xs bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-gray-700 block mb-1">步长</label>
+                    <input
+                      type="number"
+                      value={fieldForm.step ?? 1}
+                      onChange={e => setFieldForm({ ...fieldForm, step: Number(e.target.value) })}
+                      className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 font-mono text-xs bg-white"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {fieldForm.widget !== 'switch' && (
+                <div>
+                  <label className="font-bold text-gray-700 block mb-1.5">输入提示语 (Placeholder)</label>
+                  <input
+                    type="text"
+                    placeholder="例如: Describe what you want..."
+                    value={fieldForm.placeholder || ''}
+                    onChange={e => setFieldForm({ ...fieldForm, placeholder: e.target.value })}
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              )}
+
+              <div>
                 <label className="font-bold text-gray-700 block mb-1.5">默认值</label>
-                {fieldForm.type === 'boolean' ? (
+                {fieldForm.widget === 'switch' || fieldForm.type === 'boolean' ? (
                   <select
                     value={
                       fieldForm.default === true || fieldForm.default === 'true'
@@ -1181,7 +1257,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                         default: val === 'true' ? true : val === 'false' ? false : null
                       });
                     }}
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 font-mono font-medium"
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 font-mono font-medium bg-white"
                   >
                     <option value="null">null</option>
                     <option value="true">true</option>
@@ -1208,34 +1284,23 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                 />
               </div>
 
-              <div>
-                <label className="font-bold text-gray-700 block mb-1.5">最大字数</label>
-                <input
-                  type="number"
-                  placeholder="例如 4000"
-                  value={fieldForm.maxLength ?? fieldForm.maximum ?? ''}
-                  onChange={e => setFieldForm({ ...fieldForm, maxLength: e.target.value ? Number(e.target.value) : undefined })}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              <div className="pt-1">
-                <label className="flex items-center gap-2.5 cursor-pointer font-bold text-gray-800 bg-gray-50 p-3 rounded-xl border border-gray-200">
+              {(fieldForm.widget === 'input' || fieldForm.widget === 'textarea') && (
+                <div>
+                  <label className="font-bold text-gray-700 block mb-1.5">最大字数</label>
                   <input
-                    type="checkbox"
-                    checked={fieldForm.required}
-                    onChange={e => setFieldForm({ ...fieldForm, required: e.target.checked })}
-                    className="rounded w-4 h-4 text-blue-600"
+                    type="number"
+                    placeholder="例如 4000"
+                    value={fieldForm.maxLength ?? ''}
+                    onChange={e => setFieldForm({ ...fieldForm, maxLength: e.target.value ? Number(e.target.value) : undefined })}
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
                   />
-                  <span>设置为必填字段</span>
-                </label>
-              </div>
+                </div>
+              )}
 
-              {fieldForm.type !== 'array' && (
+              {(fieldForm.widget === 'select' || fieldForm.widget === 'radiogroup' || fieldForm.enumList.length > 1 || (fieldForm.enumList[0] && fieldForm.enumList[0].value !== '')) && (
                 <div className="pt-2 border-t border-gray-100">
                   <div className="flex items-center justify-between mb-3">
                     <label className="font-bold text-gray-700">枚举选项</label>
-                    <span className="text-[11px] text-gray-400">label为空时默认显示value</span>
                   </div>
                   
                   <div className="space-y-2">
@@ -1248,7 +1313,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                       <div key={idx} className="flex items-center gap-2">
                         <input
                           type="text"
-                          placeholder="例如: 16:9"
+                          placeholder="请输入，必填"
                           value={item.value}
                           onChange={e => {
                             const newList = [...fieldForm.enumList];
@@ -1259,7 +1324,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                         />
                         <input
                           type="text"
-                          placeholder="请输入"
+                          placeholder="label为空时默认显示value"
                           value={item.label}
                           onChange={e => {
                             const newList = [...fieldForm.enumList];
@@ -1337,49 +1402,51 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                   <span>参数覆盖与暂存提醒</span>
                 </div>
                 <p className="text-amber-700 leading-relaxed text-[11px]">
-                  选择待复制的源模型后，系统将把该模型的<strong>全部表单参数配置与默认值</strong>一键导入并覆盖当前「<strong>{editingModel?.name}</strong>」的编辑器面板。
-                  <br />
-                  <span className="underline decoration-amber-400 underline-offset-2">注：导入仅在当前抽屉暂存生效，覆盖后您可继续进行修改，确认无误后点击底部「提交」后才会正式保存至系统。</span>
+                  选择指定复制的模型后，系统将把该模型的<strong>全部表单参数配置与默认值</strong>一键导入并覆盖当前配置面板，确认无误后点击底部「提交」才会正式保存至系统。
                 </p>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <label className="font-bold text-gray-700 block">选择源模型 (复制其表单字段架构)</label>
-                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                <select
+                  value={sourceModelId}
+                  onChange={e => setSourceModelId(e.target.value)}
+                  className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 bg-white font-medium text-xs text-gray-800 shadow-2xs cursor-pointer transition"
+                >
+                  <option value="" disabled>-- 请选择待复制源模型 --</option>
                   {models.filter(m => m.id !== editingModel?.id).map(m => {
                     const propCount = Object.keys(m.properties || {}).length;
                     return (
-                      <div
-                        key={m.id}
-                        onClick={() => setSourceModelId(m.id)}
-                        className={`p-3 rounded-xl border cursor-pointer transition flex items-center justify-between ${
-                          sourceModelId === m.id
-                            ? 'bg-blue-50/80 border-blue-600 text-blue-900 shadow-2xs font-semibold'
-                            : 'bg-white border-gray-200 hover:border-gray-300 text-gray-700'
-                        }`}
-                      >
-                        <div>
-                          <div className="font-bold text-xs flex items-center gap-2">
-                            <span>{m.name}</span>
-                            <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.2 rounded font-normal">
-                              {m.publisher}
-                            </span>
-                          </div>
-                          <div className="text-[11px] text-gray-500 mt-0.5 line-clamp-1">
-                            {m.description || '多模态智能模型'}
-                          </div>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <span className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded border ${
-                            propCount > 0 ? 'bg-purple-50 text-purple-700 border-purple-100' : 'bg-gray-100 text-gray-500 border-gray-200'
-                          }`}>
-                            {propCount} 个字段
-                          </span>
-                        </div>
-                      </div>
+                      <option key={m.id} value={m.id}>
+                        {m.name} ({m.publisher}) - {propCount} 个字段
+                      </option>
                     );
                   })}
-                </div>
+                </select>
+
+                {sourceModelId && (() => {
+                  const selectedM = models.find(m => m.id === sourceModelId);
+                  if (!selectedM) return null;
+                  const propCount = Object.keys(selectedM.properties || {}).length;
+                  return (
+                    <div className="p-3 bg-gray-50/80 border border-gray-200 rounded-xl flex items-center justify-between text-xs">
+                      <div className="flex flex-col gap-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-gray-800">{selectedM.name}</span>
+                          <span className="text-[10px] bg-white border border-gray-200 text-gray-600 px-1.5 py-0.2 rounded font-normal">
+                            {selectedM.publisher}
+                          </span>
+                        </div>
+                        {selectedM.description && (
+                          <span className="text-[11px] text-gray-500 line-clamp-1">{selectedM.description}</span>
+                        )}
+                      </div>
+                      <span className="font-mono font-bold text-purple-700 bg-purple-50 px-2.5 py-1 rounded-lg border border-purple-100 shrink-0">
+                        {propCount} 个字段
+                      </span>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 

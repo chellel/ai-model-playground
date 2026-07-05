@@ -175,7 +175,7 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
     const value = formData[key] ?? field.default ?? '';
 
     const options = field.enum || field.options;
-    if (options && Array.isArray(options) && options.length > 0 && field.widget !== 'textarea' && field.widget !== 'slider') {
+    if (options && Array.isArray(options) && options.length > 0 && field.widget !== 'textarea' && field.widget !== 'slider' && field.widget !== 'radiogroup') {
       const enumNames = field.enumNames;
       return (
         <select
@@ -200,8 +200,10 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
 
     const effectiveWidget = field.widget || (
       (field.options && field.options.length > 0) || (field.enum && field.enum.length > 0) ? 'select' :
-      field.type === 'file' || field.format === 'uri' ? 'file' :
-      field.type === 'array' && (field.items?.format === 'uri' || field.format === 'uri' || key.includes('image') || key.includes('video') || key.includes('file')) ? 'multi-file' :
+      field.type === 'file' || field.format === 'uri' ? 'imageselect' :
+      field.type === 'array' && (field.items?.format === 'uri' || field.format === 'uri' || key.includes('image') || key.includes('video') || key.includes('file')) ? 'imageselect' :
+      field.type === 'boolean' ? 'switch' :
+      field.type === 'integer' || field.type === 'number' ? 'input' :
       undefined
     );
 
@@ -219,75 +221,136 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
 
       case 'select': {
         const optionsList = field.options || field.enum || [];
+        const enumNames = field.enumNames;
         return (
           <select
             value={value}
             onChange={(e) => onChange(key, e.target.value)}
-            className="w-full p-2.5 border border-gray-300 focus:border-black rounded-lg text-sm bg-white focus:outline-none transition cursor-pointer shadow-2xs"
+            className="w-full p-2.5 border border-gray-300 focus:border-black rounded-lg text-sm bg-white focus:outline-none transition cursor-pointer shadow-2xs font-medium text-gray-800"
           >
-            {optionsList.map((opt) => (
-              <option key={String(opt)} value={String(opt)}>
-                {String(opt)}
-              </option>
-            ))}
+            {optionsList.map((opt, idx) => {
+              const optVal = typeof opt === 'object' && opt !== null && (opt as any).value !== undefined ? String((opt as any).value) : String(opt);
+              const optLabel = typeof opt === 'object' && opt !== null && (opt as any).label !== undefined
+                ? String((opt as any).label)
+                : (Array.isArray(enumNames) && enumNames[idx] ? String(enumNames[idx]) : optVal);
+              return (
+                <option key={`${optVal}-${idx}`} value={optVal}>
+                  {optLabel || optVal}
+                </option>
+              );
+            })}
           </select>
         );
       }
 
-      case 'slider':
+      case 'radiogroup': {
+        const optionsList = field.enum || field.options || [];
+        const enumNames = field.enumNames;
+        return (
+          <div className="flex flex-wrap gap-2 pt-1">
+            {optionsList.map((opt, idx) => {
+              const optVal = typeof opt === 'object' && opt !== null && (opt as any).value !== undefined ? String((opt as any).value) : String(opt);
+              const optLabel = typeof opt === 'object' && opt !== null && (opt as any).label !== undefined
+                ? String((opt as any).label)
+                : (Array.isArray(enumNames) && enumNames[idx] ? String(enumNames[idx]) : optVal);
+              const isSelected = String(value) === optVal;
+              return (
+                <button
+                  key={`${optVal}-${idx}`}
+                  type="button"
+                  onClick={() => onChange(key, optVal)}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition border flex items-center gap-2 ${
+                    isSelected
+                      ? 'bg-black text-white border-black shadow-sm'
+                      : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  <span className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0 ${
+                    isSelected ? 'border-white bg-white/20' : 'border-gray-300 bg-white'
+                  }`}>
+                    {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                  </span>
+                  <span>{optLabel || optVal}</span>
+                </button>
+              );
+            })}
+          </div>
+        );
+      }
+
+      case 'slider': {
+        const minVal = field.minimum ?? field.min ?? 0;
+        const maxVal = field.maximum ?? field.max ?? 100;
+        const stepVal = field.step ?? 1;
         return (
           <div className="space-y-2 p-3 bg-gray-50/80 rounded-lg border border-gray-200/60">
             <div className="flex items-center justify-between">
               <span className="text-xs text-gray-500 flex items-center gap-1">
                 <Sliders className="w-3.5 h-3.5" />
-                <span>Range: {field.min} to {field.max} (step {field.step || 1})</span>
+                <span>范围: {minVal} 至 {maxVal} (步长 {stepVal})</span>
               </span>
               <span className="text-sm font-mono font-bold bg-white px-2 py-0.5 rounded border border-gray-200 text-black">
-                {value}
+                {value !== '' && value !== undefined ? value : minVal}
               </span>
             </div>
             <input
               type="range"
               className="w-full accent-black cursor-pointer h-1.5 bg-gray-200 rounded-lg"
-              min={field.min ?? 0}
-              max={field.max ?? 100}
-              step={field.step ?? 1}
-              value={value}
+              min={minVal}
+              max={maxVal}
+              step={stepVal}
+              value={value !== '' && value !== undefined ? Number(value) : minVal}
               onChange={(e) => onChange(key, Number(e.target.value))}
             />
           </div>
         );
+      }
 
+      case 'switch':
       case 'boolean':
         return (
           <button
             type="button"
             onClick={() => onChange(key, !value)}
-            className="flex items-center gap-2.5 p-2.5 rounded-lg border border-gray-200 hover:border-gray-400 bg-white transition w-full text-left"
+            className="flex items-center justify-between p-3 rounded-xl border border-gray-200 hover:border-gray-300 bg-white transition w-full text-left"
           >
-            {value ? (
-              <CheckSquare className="w-5 h-5 text-black shrink-0" />
-            ) : (
-              <Square className="w-5 h-5 text-gray-300 shrink-0" />
-            )}
             <span className="text-sm font-medium text-gray-800">
-              {value ? 'true (开启)' : 'false (关闭)'}
+              {value ? '开启 (True)' : '关闭 (False)'}
             </span>
+            <div className={`w-11 h-6 flex items-center rounded-full p-1 duration-200 transition-colors ${
+              value ? 'bg-black' : 'bg-gray-200'
+            }`}>
+              <div className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-200 transition-transform ${
+                value ? 'translate-x-5' : 'translate-x-0'
+              }`} />
+            </div>
           </button>
         );
 
+      case 'input':
       case 'number':
-        return (
-          <div className="flex items-center gap-2">
+        if (field.type === 'integer' || field.type === 'number') {
+          return (
             <input
               type="number"
-              className="flex-1 p-2.5 border border-gray-300 focus:border-black rounded-lg text-sm font-mono bg-white focus:outline-none transition shadow-2xs"
+              className="w-full p-2.5 border border-gray-300 focus:border-black rounded-lg text-sm font-mono bg-white focus:outline-none transition shadow-2xs"
               value={value}
+              placeholder={field.placeholder || `例如: ${field.default ?? ''}`}
               onChange={(e) => onChange(key, Number(e.target.value))}
             />
-          </div>
+          );
+        }
+        return (
+          <input
+            type="text"
+            className="w-full p-2.5 border border-gray-300 focus:border-black rounded-lg text-sm bg-white focus:outline-none transition shadow-2xs"
+            value={value}
+            placeholder={field.placeholder || `例如: ${field.default ?? ''}`}
+            onChange={(e) => onChange(key, e.target.value)}
+          />
         );
 
+      case 'imageselect':
       case 'file':
       case 'multi-file':
         return (
@@ -296,7 +359,7 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
             fieldKey={key}
             value={formData[key]}
             onChange={(val) => onChange(key, val)}
-            isMulti={effectiveWidget === 'multi-file'}
+            isMulti={effectiveWidget === 'multi-file' || field.type === 'array'}
           />
         );
 
@@ -354,9 +417,11 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
 
   return (
     <div className="space-y-6">
-      {Object.keys(properties).map((key) => {
-        const field = properties[key] as SchemaProperty;
-        if (field.type === 'boolean' || field.widget === 'boolean') {
+      {Object.keys(properties)
+        .sort((a, b) => ((properties[a] as SchemaProperty)['x-order'] ?? 99) - ((properties[b] as SchemaProperty)['x-order'] ?? 99))
+        .map((key) => {
+          const field = properties[key] as SchemaProperty;
+          if (field.type === 'boolean' || field.widget === 'boolean' || field.widget === 'switch') {
           const val = !!formData[key];
           return (
             <div key={key} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
