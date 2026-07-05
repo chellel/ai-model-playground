@@ -23,24 +23,6 @@ export const SAMPLE_IMAGES = [
   }
 ];
 
-export const PROMPT_PRESETS: Record<string, string[]> = {
-  'bytedance/seedance-2.0': [
-    'A cozy cabin in a snowy forest at night, warm light glowing from the windows, gentle snowfall, camera slowly pushing in through the trees with atmospheric ambient audio',
-    'Cinematic FPV drone shot flying through a bustling futuristic Tokyo cyber market at rain night, neon reflections on wet asphalt, steam rising from ramen stalls',
-    'Close up shot of a majestic golden retriever running through high spring grass in slow motion, ears flopping, sunlight flare hitting lens',
-    'Astronaut standing on a glowing bioluminescent alien shore, ocean waves gently crashing against crystal rocks under two giant moons'
-  ],
-  'black-forest-labs/flux-1.1-pro': [
-    'Extreme close-up macro photography of a mechanical watch gear mechanism made of iridescent titanium and sapphire crystals, studio rim lighting, 8k resolution',
-    'An editorial fashion portrait of a young woman wearing a futuristic translucent raincoat in rainy London, neon street signs reflected in puddles, shot on 35mm film',
-    'A cozy modern architectural living room overlooking a serene foggy Norwegian fjord at sunrise, minimalist Scandinavian furniture, soft warm indoor lighting'
-  ],
-  'google/veo-2': [
-    'Time-lapse of a glowing cherry blossom tree blooming rapidly in a mystical mossy ancient temple courtyard, glowing fireflies swirling upwards',
-    'Slow pan across a 1970s vintage record player spinning a vinyl record with warm sunbeams slicing through dusty room air'
-  ]
-};
-
 export const MODEL_SCHEMAS: ModelSchema[] = [
   {
     id: 'bytedance/seedance-2.0',
@@ -59,7 +41,7 @@ export const MODEL_SCHEMAS: ModelSchema[] = [
         type: 'string',
         title: 'prompt',
         widget: 'textarea',
-        default: 'A cozy cabin in a snowy forest at night, warm light glowing from the windows, gentle snowfall, camera slowly pushing in through the trees',
+        default: 'Describe the video you want, e.g. an orange cat running through a rainy street, cinematic, shallow depth of field. Wrap dialogue in double quotes to improve audio.',
         help: 'Text prompt for video generation and native sound generation. Maximum 4000 characters.',
         required: true
       },
@@ -67,8 +49,9 @@ export const MODEL_SCHEMAS: ModelSchema[] = [
         type: 'string',
         title: 'aspect_ratio',
         widget: 'select',
-        options: ['16:9 (Landscape)', '9:16 (Vertical Mobile)', '1:1 (Square)', '21:9 (Cinematic Widescreen)'],
-        default: '16:9 (Landscape)',
+        options: ['16:9', '4:3', '1:1', '3:4', '9:16', '21:9', '9:21', 'adaptive'],
+        enum: ['16:9', '4:3', '1:1', '3:4', '9:16', '21:9', '9:21', 'adaptive'],
+        default: '16:9',
         help: 'Aspect ratio of the output video canvas.'
       },
       image: {
@@ -109,12 +92,12 @@ export const MODEL_SCHEMAS: ModelSchema[] = [
         default: 6.0,
         help: 'How strictly the diffusion model adheres to your prompt vs creative freedom.'
       },
-      enable_native_audio: {
+      generate_audio: {
         type: 'boolean',
-        title: 'enable_native_audio',
+        title: 'Generate Audio',
         widget: 'boolean',
         default: true,
-        help: 'Synthesize synchronized ambient Foley sound effects and spatial acoustics matching visual action.'
+        help: 'Generate voices, sound effects, and background music synced to the video'
       },
       seed: {
         type: 'integer',

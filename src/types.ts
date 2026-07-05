@@ -11,6 +11,7 @@ export type WidgetType =
 export interface SchemaProperty {
   type: 'string' | 'integer' | 'number' | 'boolean' | 'file' | 'array';
   title?: string;
+  description?: string;
   widget?: WidgetType;
   default?: any;
   help?: string;
@@ -19,7 +20,15 @@ export interface SchemaProperty {
   max?: number;
   step?: number;
   options?: string[];
+  enum?: (string | number)[];
+  enumNames?: string[];
   placeholder?: string;
+  format?: string;
+  items?: { type?: string; format?: string };
+  maxLength?: number;
+  minimum?: number;
+  maximum?: number;
+  'x-order'?: number;
 }
 
 export interface ModelSchema {

@@ -9,8 +9,11 @@ import { DynamicForm } from './components/DynamicForm';
 import { CodeViewer } from './components/CodeViewer';
 import { OutputPanel } from './components/OutputPanel';
 import { SchemaEditorModal } from './components/SchemaEditorModal';
+import { AdminConsole } from './components/AdminConsole';
+import { ApiTokenSelector } from './components/ApiTokenSelector';
 
 export default function App() {
+  const [currentView, setCurrentView] = useState<'playground' | 'console'>('playground');
   const [models, setModels] = useState<ModelSchema[]>(MODEL_SCHEMAS);
   const [currentModel, setCurrentModel] = useState<ModelSchema>(models[0]);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -52,6 +55,14 @@ export default function App() {
 
   const handleInputChange = (key: string, value: any) => {
     setFormData(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleResetForm = () => {
+    const initial: Record<string, any> = {};
+    Object.keys(currentModel.properties).forEach((k) => {
+      initial[k] = currentModel.properties[k].default ?? '';
+    });
+    setFormData(initial);
   };
 
   // Simulation timer and logs runner
@@ -127,6 +138,16 @@ export default function App() {
     handleSelectModel(updated);
   };
 
+  if (currentView === 'console') {
+    return (
+      <AdminConsole
+        models={models}
+        onUpdateModel={handleApplyCustomSchema}
+        onExitConsole={() => setCurrentView('playground')}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50/50 text-gray-900 font-sans selection:bg-purple-600 selection:text-white pb-20">
       {/* Brand Navigation */}
@@ -134,6 +155,7 @@ export default function App() {
         selectedCategory={selectedCategory}
         onSelectCategory={setSelectedCategory}
         onOpenSchemaEditor={() => setIsSchemaModalOpen(true)}
+        onEnterConsole={() => setCurrentView('console')}
       />
 
       {/* Hero Banner matching prototype 1 & 2 */}
@@ -154,56 +176,52 @@ export default function App() {
       <main className="max-w-[1400px] mx-auto px-6 py-10">
         {activeSection === 'Playground' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            {/* Left Column Card: Form / JSON Mode */}
-            <div className="lg:col-span-5 bg-white border border-gray-200/80 rounded-2xl p-6 shadow-xs">
-              {/* Form Mode / JSON Mode pill switch matching prototype 2 */}
-              <div className="flex bg-gray-100 p-1 rounded-xl mb-6 w-fit">
-                {['Form', 'JSON', 'Python', 'Node.js'].map(tab => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition ${
-                      activeTab === tab
-                        ? 'bg-white text-gray-900 shadow-2xs'
-                        : 'text-gray-500 hover:text-gray-900'
-                    }`}
-                  >
-                    {tab === 'Form' ? 'Form Mode' : tab === 'JSON' ? 'JSON Mode' : tab}
-                  </button>
-                ))}
-              </div>
+            {/* Left Column: API Token Card + Form/JSON Mode Card */}
+            <div className="lg:col-span-5 space-y-6">
+              {/* Independent API Token Card */}
+              <ApiTokenSelector />
 
-              {activeTab === 'Form' ? (
-                <DynamicForm
-                  modelId={currentModel.id}
-                  properties={currentModel.properties}
-                  formData={formData}
-                  onChange={handleInputChange}
-                  onRun={() => setIsGenerating(true)}
-                  isGenerating={isGenerating}
-                />
-              ) : (
-                <CodeViewer
-                  modelId={currentModel.id}
-                  formData={formData}
-                  activeTab={activeTab}
-                />
-              )}
+              {/* Form / JSON Mode Card */}
+              <div className="bg-white border border-gray-200/80 rounded-2xl p-6 shadow-xs">
+                {/* Form Mode / JSON Mode pill switch matching prototype 2 */}
+                <div className="flex bg-gray-100 p-1 rounded-xl mb-6 w-fit">
+                  {['Form', 'JSON'].map(tab => (
+                    <button
+                      key={tab}
+                      onClick={() => setActiveTab(tab)}
+                      className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition ${
+                        activeTab === tab
+                          ? 'bg-white text-gray-900 shadow-2xs'
+                          : 'text-gray-500 hover:text-gray-900'
+                      }`}
+                    >
+                      {tab === 'Form' ? 'Form Mode' : tab === 'JSON' ? 'JSON Mode' : tab}
+                    </button>
+                  ))}
+                </div>
+
+                {activeTab === 'Form' ? (
+                  <DynamicForm
+                    modelId={currentModel.id}
+                    properties={currentModel.properties}
+                    formData={formData}
+                    onChange={handleInputChange}
+                    onRun={() => setIsGenerating(true)}
+                    onReset={handleResetForm}
+                    isGenerating={isGenerating}
+                  />
+                ) : (
+                  <CodeViewer
+                    modelId={currentModel.id}
+                    formData={formData}
+                    activeTab={activeTab}
+                  />
+                )}
+              </div>
             </div>
 
             {/* Right Column Card: Model Preview Area matching prototype 2 */}
             <div className="lg:col-span-7 bg-white border border-gray-200/80 rounded-2xl p-6 shadow-xs flex flex-col min-h-[640px]">
-              {/* Card Header matching prototype 2: "Model: GPT-5.5" */}
-              <div className="border-b border-gray-100 pb-4 mb-6 flex items-center justify-between">
-                <div className="inline-flex items-center px-3.5 py-1.5 rounded-lg bg-gray-100/80 border border-gray-200 text-sm font-bold text-gray-800">
-                  Model: {currentModel.name}
-                </div>
-                <div className="flex items-center gap-2 text-xs text-gray-500">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span>Ready to synthesize</span>
-                </div>
-              </div>
-
               <div className="flex-1 flex flex-col">
                 <OutputPanel
                   model={currentModel}

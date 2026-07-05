@@ -17,20 +17,6 @@ export const ModelHero: React.FC<ModelHeroProps> = ({
 }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
-  // Dynamic tags based on model category
-  const getModelTags = () => {
-    switch (currentModel.category) {
-      case 'Video Generation':
-        return ['1080p / 4K Video', 'Native Audio Synthesis', 'Multi-frame Consistency', 'Camera Motion Control', 'OpenAPI Compatible'];
-      case 'Image Generation':
-        return ['Photorealistic 4K', 'Typography Rendering', 'Raw Film Aesthetics', 'Lens Precision', 'Ultra Low Latency'];
-      case 'Language Model':
-        return ['Reasoning', 'Coding', 'Long Context', 'Structured Outputs', 'OpenAI Compatible'];
-      default:
-        return ['High Speed Inference', 'Word-level Timestamps', 'Multilingual Speech', 'Streaming Output'];
-    }
-  };
-
   return (
     <div className="relative overflow-hidden bg-gradient-to-b from-purple-50/60 via-indigo-50/30 to-white pt-12 pb-14 border-b border-gray-100">
       {/* Wave pattern decorative graphic in background */}
@@ -133,18 +119,6 @@ export const ModelHero: React.FC<ModelHeroProps> = ({
             <Shield className="w-3.5 h-3.5 text-blue-500" />
             <span>Runs: <strong className="text-gray-800">{currentModel.runsCount}</strong></span>
           </div>
-        </div>
-
-        {/* Feature Pills matching prototype 2 ("Reasoning", "Coding", "Long Context", etc.) */}
-        <div className="flex flex-wrap justify-center items-center gap-2.5 mt-6">
-          {getModelTags().map((tag, idx) => (
-            <span
-              key={idx}
-              className="px-3.5 py-1.5 rounded-lg border border-gray-200 bg-white/90 text-gray-700 text-xs font-medium shadow-2xs hover:border-purple-400 transition"
-            >
-              {tag}
-            </span>
-          ))}
         </div>
 
         {/* Two CTAs matching prototype 2 */}
