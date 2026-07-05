@@ -1,0 +1,6 @@
+{
+  "name": "AI Model Playground Studio",
+  "description": "Interactive multimodal model playground with dynamic schema form builder, real-time logs streaming, code export, and live video/image generation preview.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
