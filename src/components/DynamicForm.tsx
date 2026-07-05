@@ -345,6 +345,7 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
             type="text"
             className="w-full p-2.5 border border-gray-300 focus:border-black rounded-lg text-sm bg-white focus:outline-none transition shadow-2xs"
             value={value}
+            placeholder={field.placeholder || `Enter ${key}...`}
             onChange={(e) => onChange(key, e.target.value)}
           />
         );

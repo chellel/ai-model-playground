@@ -41,7 +41,8 @@ export const MODEL_SCHEMAS: ModelSchema[] = [
         type: 'string',
         title: 'prompt',
         widget: 'textarea',
-        default: 'Describe the video you want, e.g. an orange cat running through a rainy street, cinematic, shallow depth of field. Wrap dialogue in double quotes to improve audio.',
+        placeholder: 'Describe the video you want, e.g. an orange cat running through a rainy street, cinematic, shallow depth of field. Wrap dialogue in double quotes to improve audio.',
+        default: '',
         help: 'Text prompt for video generation and native sound generation. Maximum 4000 characters.',
         required: true
       },

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ModelSchema } from '../types';
 import {
   Sparkles, Bell, Monitor, Search, Plus, RefreshCw, Layers, Edit, Trash2, Check, X, Save, ExternalLink,
-  Sliders, Eye, Code, FileText, ChevronRight, ChevronDown, Shield, Key, BarChart2,
+  Sliders, Eye, Code, FileText, ChevronRight, ChevronDown, Shield, Key, BarChart2, Copy,
   Image as ImageIcon, Activity, CreditCard, Gift, Users, Settings, Server, Share2,
   Calendar, LayoutDashboard, MessageSquare, Play, ChevronLeft, AlertTriangle, ToggleLeft, ToggleRight
 } from 'lucide-react';
@@ -37,6 +37,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
     title: string;
     type: string;
     description: string;
+    placeholder?: string;
     default: any;
     format?: string;
     enumList: { value: string; label: string }[];
@@ -50,6 +51,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
     title: '',
     type: 'string',
     description: '',
+    placeholder: '',
     default: '',
     format: '',
     enumList: [{ value: '', label: '' }],
@@ -57,6 +59,8 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
     required: false
   });
   const [showAddFieldModal, setShowAddFieldModal] = useState<boolean>(false);
+  const [showCopyModal, setShowCopyModal] = useState<boolean>(false);
+  const [sourceModelId, setSourceModelId] = useState<string>('');
 
   // Additional mock rows to match New API admin console screenshot exactly
   const mockTableData = [
@@ -230,6 +234,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
         title: prop.title || fieldKey,
         type: prop.type || 'string',
         description: prop.description || '',
+        placeholder: prop.placeholder || '',
         default: prop.default ?? '',
         format: prop.format || prop.items?.format || (prop.widget === 'file' || prop.widget === 'multi-file' ? 'uri' : ''),
         enumList: initialEnumList,
@@ -246,6 +251,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
         title: '',
         type: 'string',
         description: '',
+        placeholder: '',
         default: '',
         format: '',
         enumList: [{ value: '', label: '' }],
@@ -266,6 +272,9 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
       'x-order': Number(fieldForm.xOrder) || 0,
       required: fieldForm.required
     };
+    if (fieldForm.placeholder) {
+      newProp.placeholder = fieldForm.placeholder;
+    }
     if (fieldForm.default !== '' && fieldForm.default !== undefined) {
       if (fieldForm.type === 'integer' || fieldForm.type === 'number') {
         newProp.default = Number(fieldForm.default);
@@ -327,8 +336,9 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
         'x-order': 0,
         maxLength: 4000,
         required: true,
+        placeholder: 'Describe the video you want, e.g. an orange cat running through a rainy street, cinematic, shallow depth of field. Wrap dialogue in double quotes to improve audio.',
         description: 'Text prompt for video generation. Maximum 4000 characters. BytePlus recommends keeping prompts under 600 English words for best results.',
-        default: 'A cinematic high-definition video of glowing jellyfish floating in deep blue ocean, volumetric light rays'
+        default: ''
       },
       image: {
         type: 'string',
@@ -399,7 +409,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
       },
       generate_audio: {
         type: 'boolean',
-        title: 'Generate Audio',
+        title: 'generate_audio',
         default: true,
         'x-order': 9,
         description: 'Generate synchronized audio with the video, including dialogue, sound effects, and background music.'
@@ -416,6 +426,28 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
       ...editingModel,
       properties: officialSeedanceProps
     });
+  };
+
+  const handleCopyFromOtherModel = () => {
+    if (!editingModel || !sourceModelId) return;
+    const sourceModel = models.find(m => m.id === sourceModelId);
+    if (!sourceModel) return;
+
+    const copiedProps = JSON.parse(JSON.stringify(sourceModel.properties || {}));
+    setEditingModel({
+      ...editingModel,
+      properties: copiedProps
+    });
+
+    const requiredKeys = Object.keys(copiedProps).filter(k => copiedProps[k].required);
+    setRawJsonText(JSON.stringify({
+      type: 'object',
+      title: 'Input',
+      required: requiredKeys.length > 0 ? requiredKeys : ['prompt'],
+      properties: copiedProps
+    }, null, 2));
+
+    setShowCopyModal(false);
   };
 
   return (
@@ -746,7 +778,6 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                       <th className="p-3">模型名称</th>
                       <th className="p-3">匹配类型</th>
                       <th className="p-3">参与官方同步</th>
-                      <th className="p-3">描述</th>
                       <th className="p-3">供应商</th>
                       <th className="p-3">标签</th>
                       <th className="p-3">端点</th>
@@ -770,7 +801,6 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                         </td>
                         <td className="p-3"><span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-[11px] font-semibold">精确</span></td>
                         <td className="p-3"><span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-[11px] font-semibold">是</span></td>
-                        <td className="p-3 text-gray-600 max-w-xs truncate">{m.description || '多模态智能生成模型'}</td>
                         <td className="p-3 font-medium text-blue-600">▲ {m.publisher}</td>
                         <td className="p-3"><span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-[11px]">{m.category.toLowerCase()}</span></td>
                         <td className="p-3 text-gray-500">openai / sse</td>
@@ -806,7 +836,6 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                         <td className="p-3 font-semibold text-gray-800">{row.name}</td>
                         <td className="p-3"><span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-[11px]">精确</span></td>
                         <td className="p-3"><span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-[11px]">是</span></td>
-                        <td className="p-3 text-gray-500 max-w-xs truncate">{row.desc}</td>
                         <td className="p-3 font-medium text-blue-600">{row.supplier}</td>
                         <td className="p-3"><span className="bg-pink-100 text-pink-700 px-2 py-0.5 rounded text-[11px]">{row.tag}</span></td>
                         <td className="p-3 text-gray-500">{row.endpoint}</td>
@@ -878,13 +907,28 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                       <p className="text-xs text-gray-500 mt-0.5">此处配置的控件将在多模态表单（图片、视频生成等）中实时渲染</p>
                     </div>
                   </div>
-                  <button
-                    onClick={handleLoadOfficialSeedanceSchema}
-                    className="px-3 py-1.5 rounded-lg bg-purple-50 text-purple-700 border border-purple-200 text-xs font-bold hover:bg-purple-100 transition flex items-center gap-1.5"
-                  >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>载入 Seedance 2.0 官方 11项完整 Schema</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        const otherModels = models.filter(m => m.id !== editingModel?.id);
+                        if (otherModels.length > 0) {
+                          setSourceModelId(otherModels[0].id);
+                        }
+                        setShowCopyModal(true);
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-200 text-xs font-bold hover:bg-blue-100 transition flex items-center gap-1.5 shadow-2xs"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>复制其他模型参数配置</span>
+                    </button>
+                    <button
+                      onClick={handleLoadOfficialSeedanceSchema}
+                      className="px-3 py-1.5 rounded-lg bg-purple-50 text-purple-700 border border-purple-200 text-xs font-bold hover:bg-purple-100 transition flex items-center gap-1.5"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>载入 Seedance 2.0 官方 11项完整 Schema（测试用）</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Sub-tabs inside Schema Card */}
@@ -1049,40 +1093,53 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
       {/* Add/Edit Single Parameter Sub-Modal */}
       {showAddFieldModal && (
         <div className="fixed inset-0 z-60 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-lg p-6 space-y-4 animate-in zoom-in-95 duration-150">
-            <h4 className="font-extrabold text-base text-gray-900 flex items-center justify-between border-b border-gray-100 pb-3">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-lg p-6 max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-150">
+            <h4 className="font-extrabold text-base text-gray-900 flex items-center justify-between border-b border-gray-100 pb-3 shrink-0">
               <span>{editingFieldKey ? `编辑参数字段 - ${editingFieldKey}` : '新增模型参数字段'}</span>
               <button onClick={() => setShowAddFieldModal(false)} className="text-gray-400 hover:text-gray-700">✕</button>
             </h4>
 
-            <div className="grid grid-cols-2 gap-3 text-xs">
+            <div className="overflow-y-auto pr-1 space-y-4 py-2 flex-1 text-xs">
               <div>
-                <label className="font-bold text-gray-700 block mb-1">参数键名 *</label>
+                <label className="font-bold text-gray-700 block mb-1.5">参数键名 *</label>
                 <input
                   type="text"
                   placeholder="例如: resolution, aspect_ratio"
                   value={fieldForm.key}
                   onChange={e => setFieldForm({ ...fieldForm, key: e.target.value })}
                   disabled={!!editingFieldKey}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 font-mono"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 font-mono"
                 />
               </div>
+
               <div>
-                <label className="font-bold text-gray-700 block mb-1">显示名称</label>
+                <label className="font-bold text-gray-700 block mb-1.5">显示名称</label>
                 <input
                   type="text"
                   placeholder="例如: Video Resolution"
                   value={fieldForm.title}
                   onChange={e => setFieldForm({ ...fieldForm, title: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
                 />
               </div>
+
               <div>
-                <label className="font-bold text-gray-700 block mb-1">数据类型</label>
+                <label className="font-bold text-gray-700 block mb-1.5">输入提示语 (Placeholder)</label>
+                <input
+                  type="text"
+                  placeholder="例如: Describe the video you want..."
+                  value={fieldForm.placeholder || ''}
+                  onChange={e => setFieldForm({ ...fieldForm, placeholder: e.target.value })}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-gray-700 block mb-1.5">数据类型</label>
                 <select
                   value={fieldForm.type}
                   onChange={e => setFieldForm({ ...fieldForm, type: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 font-semibold"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 font-semibold"
                 >
                   <option value="string">文本</option>
                   <option value="integer">整数</option>
@@ -1091,34 +1148,33 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                   <option value="array">多媒体上传数组</option>
                 </select>
               </div>
+
               <div>
-                <label className="font-bold text-gray-700 block mb-1">表单格式 / 格式约束</label>
+                <label className="font-bold text-gray-700 block mb-1.5">表单格式 / 格式约束</label>
                 <select
                   value={fieldForm.format}
                   onChange={e => setFieldForm({ ...fieldForm, format: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
                 >
                   <option value="">普通文本框</option>
                   <option value="uri">链接上传</option>
                   <option value="textarea">多行长文本区域</option>
                 </select>
               </div>
-            </div>
 
-            <div className="text-xs space-y-3">
               <div>
-                <label className="font-bold text-gray-700 block mb-1">说明描述</label>
+                <label className="font-bold text-gray-700 block mb-1.5">说明描述</label>
                 <input
                   type="text"
                   placeholder="该参数在前端模型广场向用户展示的提示信息"
                   value={fieldForm.description}
                   onChange={e => setFieldForm({ ...fieldForm, description: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
                 />
               </div>
 
               <div>
-                <label className="font-bold text-gray-700 block mb-1">默认值</label>
+                <label className="font-bold text-gray-700 block mb-1.5">默认值</label>
                 {fieldForm.type === 'boolean' ? (
                   <select
                     value={
@@ -1135,7 +1191,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                         default: val === 'true' ? true : val === 'false' ? false : null
                       });
                     }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 font-mono font-medium"
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 font-mono font-medium"
                   >
                     <option value="null">null</option>
                     <option value="true">true</option>
@@ -1147,112 +1203,114 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                     placeholder="例如: 16:9 或 720p"
                     value={String(fieldForm.default ?? '')}
                     onChange={e => setFieldForm({ ...fieldForm, default: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 font-mono"
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 font-mono"
                   />
                 )}
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="font-bold text-gray-700">枚举选项</label>
-                  <span className="text-[11px] text-gray-400">label为空时默认显示value</span>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="grid grid-cols-2 gap-2 px-1 text-xs font-bold text-gray-700">
-                    <div>value</div>
-                    <div>label</div>
+                <label className="font-bold text-gray-700 block mb-1.5">表单排序</label>
+                <input
+                  type="number"
+                  value={fieldForm.xOrder}
+                  onChange={e => setFieldForm({ ...fieldForm, xOrder: Number(e.target.value) })}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-gray-700 block mb-1.5">最大字数</label>
+                <input
+                  type="number"
+                  placeholder="例如 4000"
+                  value={fieldForm.maxLength ?? fieldForm.maximum ?? ''}
+                  onChange={e => setFieldForm({ ...fieldForm, maxLength: e.target.value ? Number(e.target.value) : undefined })}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div className="pt-1">
+                <label className="flex items-center gap-2.5 cursor-pointer font-bold text-gray-800 bg-gray-50 p-3 rounded-xl border border-gray-200">
+                  <input
+                    type="checkbox"
+                    checked={fieldForm.required}
+                    onChange={e => setFieldForm({ ...fieldForm, required: e.target.checked })}
+                    className="rounded w-4 h-4 text-blue-600"
+                  />
+                  <span>设置为必填字段</span>
+                </label>
+              </div>
+
+              {fieldForm.type !== 'array' && (
+                <div className="pt-2 border-t border-gray-100">
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="font-bold text-gray-700">枚举选项</label>
+                    <span className="text-[11px] text-gray-400">label为空时默认显示value</span>
                   </div>
                   
-                  {(fieldForm.enumList || []).map((item, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        placeholder="例如: 16:9"
-                        value={item.value}
-                        onChange={e => {
-                          const newList = [...fieldForm.enumList];
-                          newList[idx].value = e.target.value;
-                          setFieldForm({ ...fieldForm, enumList: newList });
-                        }}
-                        className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 font-mono text-xs"
-                      />
-                      <input
-                        type="text"
-                        placeholder="例如: 宽屏 16:9 (可选)"
-                        value={item.label}
-                        onChange={e => {
-                          const newList = [...fieldForm.enumList];
-                          newList[idx].label = e.target.value;
-                          setFieldForm({ ...fieldForm, enumList: newList });
-                        }}
-                        className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-xs"
-                      />
-                      <div className="flex items-center gap-1 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => {
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-2 px-1 text-xs font-bold text-gray-700">
+                      <div>value</div>
+                      <div>label</div>
+                    </div>
+                    
+                    {(fieldForm.enumList || []).map((item, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          placeholder="例如: 16:9"
+                          value={item.value}
+                          onChange={e => {
                             const newList = [...fieldForm.enumList];
-                            newList.splice(idx + 1, 0, { value: '', label: '' });
+                            newList[idx].value = e.target.value;
                             setFieldForm({ ...fieldForm, enumList: newList });
                           }}
-                          className="w-6 h-6 flex items-center justify-center text-red-500 hover:bg-red-50 rounded font-bold text-base transition"
-                          title="在下方添加一行"
-                        >
-                          +
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const newList = fieldForm.enumList.filter((_, i) => i !== idx);
-                            setFieldForm({ ...fieldForm, enumList: newList.length > 0 ? newList : [{ value: '', label: '' }] });
+                          className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 font-mono text-xs"
+                        />
+                        <input
+                          type="text"
+                          placeholder="例如: 宽屏 16:9 (可选)"
+                          value={item.label}
+                          onChange={e => {
+                            const newList = [...fieldForm.enumList];
+                            newList[idx].label = e.target.value;
+                            setFieldForm({ ...fieldForm, enumList: newList });
                           }}
-                          className="w-6 h-6 flex items-center justify-center text-red-500 hover:bg-red-50 rounded font-bold text-base transition"
-                          title="删除当前行"
-                        >
-                          -
-                        </button>
+                          className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-xs"
+                        />
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newList = [...fieldForm.enumList];
+                              newList.splice(idx + 1, 0, { value: '', label: '' });
+                              setFieldForm({ ...fieldForm, enumList: newList });
+                            }}
+                            className="w-6 h-6 flex items-center justify-center text-red-500 hover:bg-red-50 rounded font-bold text-base transition"
+                            title="在下方添加一行"
+                          >
+                            +
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newList = fieldForm.enumList.filter((_, i) => i !== idx);
+                              setFieldForm({ ...fieldForm, enumList: newList.length > 0 ? newList : [{ value: '', label: '' }] });
+                            }}
+                            className="w-6 h-6 flex items-center justify-center text-red-500 hover:bg-red-50 rounded font-bold text-base transition"
+                            title="删除当前行"
+                          >
+                            -
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="font-bold text-gray-700 block mb-1">表单排序</label>
-                  <input
-                    type="number"
-                    value={fieldForm.xOrder}
-                    onChange={e => setFieldForm({ ...fieldForm, xOrder: Number(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-gray-700 block mb-1">最大字数</label>
-                  <input
-                    type="number"
-                    placeholder="例如 4000"
-                    value={fieldForm.maxLength ?? fieldForm.maximum ?? ''}
-                    onChange={e => setFieldForm({ ...fieldForm, maxLength: e.target.value ? Number(e.target.value) : undefined })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-                <div className="flex items-center pt-5">
-                  <label className="flex items-center gap-2 cursor-pointer font-bold text-gray-800">
-                    <input
-                      type="checkbox"
-                      checked={fieldForm.required}
-                      onChange={e => setFieldForm({ ...fieldForm, required: e.target.checked })}
-                      className="rounded w-4 h-4 text-blue-600"
-                    />
-                    <span>设置为必填字段</span>
-                  </label>
-                </div>
-              </div>
+              )}
             </div>
 
-            <div className="flex justify-end gap-3 pt-3 border-t border-gray-100">
+            <div className="flex justify-end gap-3 pt-3 border-t border-gray-100 shrink-0">
               <button
                 onClick={() => setShowAddFieldModal(false)}
                 className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition"
@@ -1264,6 +1322,91 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                 className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-sm transition"
               >
                 保存字段
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Copy Parameters Sub-Modal */}
+      {showCopyModal && (
+        <div className="fixed inset-0 z-60 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-lg p-6 max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-150">
+            <h4 className="font-extrabold text-base text-gray-900 flex items-center justify-between border-b border-gray-100 pb-3 shrink-0">
+              <span className="flex items-center gap-2">
+                <Copy className="w-4 h-4 text-blue-600" />
+                <span>复制其他模型参数配置</span>
+              </span>
+              <button onClick={() => setShowCopyModal(false)} className="text-gray-400 hover:text-gray-700">✕</button>
+            </h4>
+
+            <div className="overflow-y-auto pr-1 space-y-4 py-3 flex-1 text-xs">
+              <div className="p-3.5 bg-amber-50 border border-amber-200/80 rounded-xl text-amber-900 space-y-1.5">
+                <div className="font-bold flex items-center gap-1.5 text-amber-800">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>参数覆盖与暂存提醒</span>
+                </div>
+                <p className="text-amber-700 leading-relaxed text-[11px]">
+                  选择待复制的源模型后，系统将把该模型的<strong>全部表单参数配置与默认值</strong>一键导入并覆盖当前「<strong>{editingModel?.name}</strong>」的编辑器面板。
+                  <br />
+                  <span className="underline decoration-amber-400 underline-offset-2">注：导入仅在当前抽屉暂存生效，覆盖后您可继续进行修改，确认无误后点击底部「提交」后才会正式保存至系统。</span>
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="font-bold text-gray-700 block">选择源模型 (复制其表单字段架构)</label>
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                  {models.filter(m => m.id !== editingModel?.id).map(m => {
+                    const propCount = Object.keys(m.properties || {}).length;
+                    return (
+                      <div
+                        key={m.id}
+                        onClick={() => setSourceModelId(m.id)}
+                        className={`p-3 rounded-xl border cursor-pointer transition flex items-center justify-between ${
+                          sourceModelId === m.id
+                            ? 'bg-blue-50/80 border-blue-600 text-blue-900 shadow-2xs font-semibold'
+                            : 'bg-white border-gray-200 hover:border-gray-300 text-gray-700'
+                        }`}
+                      >
+                        <div>
+                          <div className="font-bold text-xs flex items-center gap-2">
+                            <span>{m.name}</span>
+                            <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.2 rounded font-normal">
+                              {m.publisher}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-gray-500 mt-0.5 line-clamp-1">
+                            {m.description || '多模态智能模型'}
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded border ${
+                            propCount > 0 ? 'bg-purple-50 text-purple-700 border-purple-100' : 'bg-gray-100 text-gray-500 border-gray-200'
+                          }`}>
+                            {propCount} 个字段
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-3 border-t border-gray-100 shrink-0">
+              <button
+                onClick={() => setShowCopyModal(false)}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleCopyFromOtherModel}
+                disabled={!sourceModelId}
+                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center gap-1.5"
+              >
+                <Copy className="w-3.5 h-3.5" />
+                <span>一键导入并覆盖至当前编辑器</span>
               </button>
             </div>
           </div>
