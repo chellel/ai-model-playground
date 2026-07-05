@@ -35,9 +35,11 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
   const [fieldForm, setFieldForm] = useState<{
     key: string;
     title: string;
+    titleEn?: string;
     type: string;
     widget?: string;
     description: string;
+    descriptionEn?: string;
     placeholder?: string;
     default: any;
     format?: string;
@@ -51,9 +53,11 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
   }>({
     key: '',
     title: '',
+    titleEn: '',
     type: 'string',
     widget: 'input',
     description: '',
+    descriptionEn: '',
     placeholder: '',
     default: '',
     format: '',
@@ -260,9 +264,11 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
       setFieldForm({
         key: fieldKey,
         title: prop.title || fieldKey,
+        titleEn: prop.title_en || prop.titleEn || '',
         type: prop.type || 'string',
         widget: normalizedWidget,
         description: prop.description || '',
+        descriptionEn: prop.description_en || prop.descriptionEn || '',
         placeholder: prop.placeholder || '',
         default: prop.default ?? '',
         format: prop.format || prop.items?.format || (prop.widget === 'file' || prop.widget === 'multi-file' ? 'uri' : ''),
@@ -279,9 +285,11 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
       setFieldForm({
         key: '',
         title: '',
+        titleEn: '',
         type: 'string',
         widget: 'input',
         description: '',
+        descriptionEn: '',
         placeholder: '',
         default: '',
         format: '',
@@ -309,6 +317,14 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
       'x-order': Number(fieldForm.xOrder) || 0,
       required: fieldForm.required
     };
+    if (fieldForm.titleEn?.trim()) {
+      newProp.title_en = fieldForm.titleEn.trim();
+      newProp.titleEn = fieldForm.titleEn.trim();
+    }
+    if (fieldForm.descriptionEn?.trim()) {
+      newProp.description_en = fieldForm.descriptionEn.trim();
+      newProp.descriptionEn = fieldForm.descriptionEn.trim();
+    }
     if (fieldForm.placeholder && widgetType !== 'switch') {
       newProp.placeholder = fieldForm.placeholder;
     }
@@ -924,11 +940,8 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
             {/* Drawer Header matching screenshot */}
             <div className="px-6 py-4 border-b border-gray-200 bg-white flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
-                <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-600 font-bold text-xs border border-blue-200/60">
-                  Schema
-                </span>
                 <h3 className="font-extrabold text-lg text-gray-900 tracking-tight">
-                  配置多模态参数 - 「{editingModel.name}」
+                  配置参数 - 「{editingModel.name}」
                 </h3>
               </div>
               <button
@@ -1031,15 +1044,37 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                             <th className="p-2.5 w-12 text-center">排序</th>
                             <th className="p-2.5">键名 (Key)</th>
                             <th className="p-2.5">标题 / 说明</th>
-                            <th className="p-2.5">数据类型</th>
+                            <th className="p-2.5">参数组件类型</th>
                             <th className="p-2.5 text-center">必填</th>
                             <th className="p-2.5 text-right">操作</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                          {(Object.entries(editingModel.properties) as [string, any][])
+                            {(Object.entries(editingModel.properties) as [string, any][])
                             .sort(([, a], [, b]) => (a['x-order'] ?? 99) - (b['x-order'] ?? 99))
-                            .map(([key, prop]) => (
+                            .map(([key, prop]) => {
+                              const derivedWidget = prop.widget || (
+                                prop.type === 'boolean' ? 'switch' :
+                                (prop.enum || prop.options) ? 'select' :
+                                (prop.type === 'file' || prop.format === 'uri' || (prop.type === 'array' && (prop.items?.format === 'uri' || key.includes('image') || key.includes('video')))) ? 'fileselect' :
+                                prop.format === 'textarea' ? 'textarea' :
+                                'input'
+                              );
+                              const normalizedWidget = 
+                                derivedWidget === 'boolean' ? 'switch' :
+                                derivedWidget === 'number' || derivedWidget === 'text' ? 'input' :
+                                derivedWidget === 'file' || derivedWidget === 'multi-file' || derivedWidget === 'imageselect' ? 'fileselect' :
+                                derivedWidget;
+                              const widgetLabelMap: Record<string, string> = {
+                                slider: '滑块 (slider)',
+                                input: '输入框 (input)',
+                                select: '下拉选择 (select)',
+                                radiogroup: '单选按钮组 (radiogroup)',
+                                switch: '开关 (switch)',
+                                textarea: '多行文本 (textarea)',
+                                fileselect: '文件上传 (fileselect)'
+                              };
+                              return (
                               <tr key={key} className="hover:bg-gray-50/80 transition">
                                 <td className="p-2.5 text-center font-mono font-bold text-gray-400">
                                   #{prop['x-order'] ?? 10}
@@ -1048,17 +1083,28 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                                   {key}
                                 </td>
                                 <td className="p-2.5">
-                                  <div className="font-bold text-gray-900">{prop.title || key}</div>
-                                  <div className="text-[11px] text-gray-500 line-clamp-1">{prop.description || '暂无描述'}</div>
+                                  <div className="font-bold text-gray-900 flex items-center gap-1.5 flex-wrap">
+                                    <span>{prop.title || key}</span>
+                                    {(prop.title_en || prop.titleEn) && (
+                                      <span className="font-normal text-[11px] text-gray-400">({prop.title_en || prop.titleEn})</span>
+                                    )}
+                                  </div>
+                                  <div className="text-[11px] text-gray-500 line-clamp-1 mt-0.5">
+                                    <span>{prop.description || '暂无描述'}</span>
+                                    {(prop.description_en || prop.descriptionEn) && (
+                                      <span className="text-gray-400"> / {prop.description_en || prop.descriptionEn}</span>
+                                    )}
+                                  </div>
                                 </td>
                                 <td className="p-2.5">
-                                  <span className={`px-2 py-0.5 rounded font-mono font-semibold text-[10px] ${
-                                    prop.type === 'string' && prop.format === 'uri' ? 'bg-amber-100 text-amber-800' :
-                                    prop.type === 'integer' || prop.type === 'number' ? 'bg-purple-100 text-purple-800' :
-                                    prop.type === 'boolean' ? 'bg-emerald-100 text-emerald-800' :
-                                    prop.type === 'array' ? 'bg-pink-100 text-pink-800' : 'bg-gray-100 text-gray-800'
+                                  <span className={`px-2 py-0.5 rounded font-medium text-[11px] ${
+                                    normalizedWidget === 'slider' ? 'bg-purple-100 text-purple-800' :
+                                    normalizedWidget === 'select' || normalizedWidget === 'radiogroup' ? 'bg-indigo-100 text-indigo-800' :
+                                    normalizedWidget === 'switch' ? 'bg-emerald-100 text-emerald-800' :
+                                    normalizedWidget === 'fileselect' ? 'bg-amber-100 text-amber-800' :
+                                    normalizedWidget === 'textarea' ? 'bg-pink-100 text-pink-800' : 'bg-blue-100 text-blue-800'
                                   }`}>
-                                    {prop.type === 'string' && prop.format === 'uri' ? 'uri/多媒体' : prop.type}
+                                    {widgetLabelMap[normalizedWidget] || normalizedWidget}
                                   </span>
                                 </td>
                                 <td className="p-2.5 text-center">
@@ -1087,7 +1133,8 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                                   </div>
                                 </td>
                               </tr>
-                            ))}
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
@@ -1129,61 +1176,87 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
       {/* Add/Edit Single Parameter Sub-Modal */}
       {showAddFieldModal && (
         <div className="fixed inset-0 z-60 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-lg p-6 max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-3xl p-6 max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-150">
             <h4 className="font-extrabold text-base text-gray-900 flex items-center justify-between border-b border-gray-100 pb-3 shrink-0">
               <span>{editingFieldKey ? `编辑参数字段 - ${editingFieldKey}` : '新增模型参数字段'}</span>
               <button onClick={() => setShowAddFieldModal(false)} className="text-gray-400 hover:text-gray-700">✕</button>
             </h4>
 
-            <div className="overflow-y-auto pr-1 space-y-4 py-2 flex-1 text-xs">
-              <div>
-                <label className="font-bold text-gray-700 block mb-1.5">参数键名 *</label>
-                <input
-                  type="text"
-                  placeholder="例如: resolution, aspect_ratio"
-                  value={fieldForm.key}
-                  onChange={e => setFieldForm({ ...fieldForm, key: e.target.value })}
-                  disabled={!!editingFieldKey}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 font-mono"
-                />
-              </div>
-
-              <div className="pt-0.5">
-                <label className="flex items-center gap-2.5 cursor-pointer font-bold text-gray-800 bg-gray-50/80 p-3 rounded-xl border border-gray-200">
+            <div className="overflow-y-auto pr-1 space-y-4 py-3 flex-1 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+                <div className="sm:col-span-2">
+                  <label className="font-bold text-gray-700 block mb-1.5">参数键名 *</label>
                   <input
-                    type="checkbox"
-                    checked={fieldForm.required}
-                    onChange={e => setFieldForm({ ...fieldForm, required: e.target.checked })}
-                    className="rounded w-4 h-4 text-blue-600"
+                    type="text"
+                    placeholder="例如: resolution, aspect_ratio"
+                    value={fieldForm.key}
+                    onChange={e => setFieldForm({ ...fieldForm, key: e.target.value })}
+                    disabled={!!editingFieldKey}
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 font-mono bg-white"
                   />
-                  <span>设置为必填字段</span>
-                </label>
+                </div>
+
+                <div>
+                  <label className="flex items-center gap-2.5 cursor-pointer font-bold text-gray-800 bg-gray-50/80 px-3.5 py-2.5 rounded-xl border border-gray-200 h-[38px]">
+                    <input
+                      type="checkbox"
+                      checked={fieldForm.required}
+                      onChange={e => setFieldForm({ ...fieldForm, required: e.target.checked })}
+                      className="rounded w-4 h-4 text-blue-600"
+                    />
+                    <span>设置为必填字段</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="font-bold text-gray-700 block mb-1.5">参数名称（中文）</label>
+                  <input
+                    type="text"
+                    placeholder="例如: 视频分辨率"
+                    value={fieldForm.title}
+                    onChange={e => setFieldForm({ ...fieldForm, title: e.target.value })}
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-gray-700 block mb-1.5">参数名称（英文）</label>
+                  <input
+                    type="text"
+                    placeholder="例如: Video Resolution"
+                    value={fieldForm.titleEn || ''}
+                    onChange={e => setFieldForm({ ...fieldForm, titleEn: e.target.value })}
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 font-sans bg-white"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="font-bold text-gray-700 block mb-1.5">描述说明（中文）</label>
+                  <input
+                    type="text"
+                    placeholder="该参数在前端表单向用户展示的中文说明"
+                    value={fieldForm.description}
+                    onChange={e => setFieldForm({ ...fieldForm, description: e.target.value })}
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-gray-700 block mb-1.5">描述说明（英文）</label>
+                  <input
+                    type="text"
+                    placeholder="English tooltip or parameter description"
+                    value={fieldForm.descriptionEn || ''}
+                    onChange={e => setFieldForm({ ...fieldForm, descriptionEn: e.target.value })}
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 font-sans bg-white"
+                  />
+                </div>
               </div>
 
               <div>
-                <label className="font-bold text-gray-700 block mb-1.5">显示名称</label>
-                <input
-                  type="text"
-                  placeholder="例如: Video Resolution"
-                  value={fieldForm.title}
-                  onChange={e => setFieldForm({ ...fieldForm, title: e.target.value })}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-gray-700 block mb-1.5">说明描述</label>
-                <input
-                  type="text"
-                  placeholder="该参数在前端表单向用户展示的提示说明"
-                  value={fieldForm.description}
-                  onChange={e => setFieldForm({ ...fieldForm, description: e.target.value })}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-gray-700 block mb-1.5">参数组件控件类型</label>
+                <label className="font-bold text-gray-700 block mb-1.5">参数组件类型</label>
                 <select
                   value={fieldForm.widget || 'input'}
                   onChange={e => {

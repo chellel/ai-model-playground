@@ -72,7 +72,7 @@ export const MODEL_SCHEMAS: ModelSchema[] = [
       reasoning_effort: {
         type: 'string',
         title: 'reasoning_effort',
-        widget: 'radiogroup',
+        widget: 'select',
         enum: ['none', 'low', 'medium', 'high', 'xhigh'],
         enumNames: [
           'none (极速对齐GPT-4.1)',
@@ -88,7 +88,7 @@ export const MODEL_SCHEMAS: ModelSchema[] = [
       verbosity: {
         type: 'string',
         title: 'verbosity',
-        widget: 'radiogroup',
+        widget: 'select',
         enum: ['low', 'medium', 'high'],
         enumNames: [
           'low (简洁扼要)',

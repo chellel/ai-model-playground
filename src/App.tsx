@@ -210,11 +210,16 @@ export default function App() {
                     onRun={() => setIsGenerating(true)}
                     onReset={handleResetForm}
                     isGenerating={isGenerating}
+                    isChatModel={currentModel.category === 'Language Model'}
                   />
                 ) : (
                   <CodeViewer
                     modelId={currentModel.id}
-                    formData={formData}
+                    formData={
+                      currentModel.category === 'Language Model'
+                        ? Object.fromEntries(Object.entries(formData).filter(([k]) => k !== 'prompt' && k !== 'messages'))
+                        : formData
+                    }
                     activeTab={activeTab}
                   />
                 )}

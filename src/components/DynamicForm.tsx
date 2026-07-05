@@ -160,6 +160,7 @@ interface DynamicFormProps {
   onRun: () => void;
   onReset?: () => void;
   isGenerating: boolean;
+  isChatModel?: boolean;
 }
 
 export const DynamicForm: React.FC<DynamicFormProps> = ({
@@ -170,6 +171,7 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
   onRun,
   onReset,
   isGenerating,
+  isChatModel = false,
 }) => {
   const renderWidget = (key: string, field: SchemaProperty) => {
     const value = formData[key] ?? field.default ?? '';
@@ -419,6 +421,7 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
   return (
     <div className="space-y-6">
       {Object.keys(properties)
+        .filter((key) => !isChatModel || (key !== 'prompt' && key !== 'messages'))
         .sort((a, b) => ((properties[a] as SchemaProperty)['x-order'] ?? 99) - ((properties[b] as SchemaProperty)['x-order'] ?? 99))
         .map((key) => {
           const field = properties[key] as SchemaProperty;
@@ -490,34 +493,36 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
             type="button"
             disabled={isGenerating}
             onClick={onReset}
-            className="w-full sm:w-auto px-5 py-3.5 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 font-semibold text-sm transition flex items-center justify-center gap-2 shadow-2xs disabled:opacity-50 shrink-0"
+            className={`${isChatModel ? 'w-full' : 'w-full sm:w-auto'} px-5 py-3.5 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 font-semibold text-sm transition flex items-center justify-center gap-2 shadow-2xs disabled:opacity-50 shrink-0`}
           >
             <RotateCcw className="w-4 h-4 text-gray-500" />
-            <span>Reset to default inputs</span>
+            <span>重置默认配置 (Reset)</span>
           </button>
         )}
-        <button
-          type="button"
-          disabled={isGenerating}
-          onClick={onRun}
-          className={`w-full sm:flex-1 py-3.5 px-6 rounded-xl font-semibold text-sm transition flex items-center justify-center gap-2 shadow-sm ${
-            isGenerating
-              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-              : 'bg-black text-white hover:bg-gray-800 active:scale-[0.99]'
-          }`}
-        >
-          {isGenerating ? (
-            <>
-              <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
-              <span>Running model inference...</span>
-            </>
-          ) : (
-            <>
-              <Sparkles className="w-4 h-4 text-amber-300" />
-              <span>Run</span>
-            </>
-          )}
-        </button>
+        {!isChatModel && (
+          <button
+            type="button"
+            disabled={isGenerating}
+            onClick={onRun}
+            className={`w-full sm:flex-1 py-3.5 px-6 rounded-xl font-semibold text-sm transition flex items-center justify-center gap-2 shadow-sm ${
+              isGenerating
+                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                : 'bg-black text-white hover:bg-gray-800 active:scale-[0.99]'
+            }`}
+          >
+            {isGenerating ? (
+              <>
+                <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                <span>Running model inference...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4 text-amber-300" />
+                <span>运行模型 (Run)</span>
+              </>
+            )}
+          </button>
+        )}
       </div>
     </div>
   );
