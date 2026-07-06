@@ -11,7 +11,7 @@ export interface ApiToken {
 const DEFAULT_TOKENS: ApiToken[] = [
   {
     id: '1',
-    name: 'jizao auto',
+    name: 'auto',
     token: 'x3qK981248972149gG8B',
     masked: 'x3qK**********gG8B',
   },

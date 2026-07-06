@@ -23,6 +23,8 @@ export interface SchemaProperty {
   descriptionEn?: string;
   widget?: WidgetType;
   default?: any;
+  target_path?: string;
+  targetPath?: string;
   help?: string;
   required?: boolean;
   min?: number;
@@ -31,7 +33,6 @@ export interface SchemaProperty {
   showToggle?: boolean;
   defaultEnabled?: boolean;
   inputMode?: 'numeric' | 'decimal' | 'text';
-  rows?: number;
   mediaType?: 'image' | 'video' | 'audio';
   maxCount?: number;
   maxSizeMb?: number;
@@ -63,6 +64,8 @@ export interface ModelSchema {
   runsCount: string;
   avgTime: string;
   pricePerRun: string;
+  api_client?: string;
+  api_mode?: string;
   coverImage?: string;
   sampleVideoUrl?: string;
   sampleImageUrl?: string;

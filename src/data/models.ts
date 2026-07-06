@@ -34,6 +34,8 @@ export const MODEL_SCHEMAS: ModelSchema[] = [
     runsCount: '16.8M runs',
     avgTime: '~1.8s',
     pricePerRun: '$0.005 / 1K tokens',
+    api_client: 'openai-responses',
+    api_mode: 'streaming',
     properties: {
       prompt: {
         type: 'string',
@@ -49,6 +51,7 @@ export const MODEL_SCHEMAS: ModelSchema[] = [
         widget: 'textarea',
         description: "System prompt to set the assistant's behavior",
         default: '',
+        target_path: 'instructions',
         'x-order': 1
       },
       messages: {
@@ -58,6 +61,7 @@ export const MODEL_SCHEMAS: ModelSchema[] = [
         widget: 'textarea',
         description: 'A JSON string representing a list of messages. For example: [{"role": "user", "content": "Hello, how are you?"}]. If provided, prompt and system_prompt are ignored.',
         default: [],
+        target_path: 'input',
         'x-order': 2
       },
       image_input: {
@@ -83,6 +87,7 @@ export const MODEL_SCHEMAS: ModelSchema[] = [
         ],
         description: 'Constrains effort on reasoning for GPT-5.4. Supported values are none, low, medium, high, and xhigh. The default none provides fast, low-latency responses similar to GPT-4.1 in speed. Higher reasoning efforts produce more thorough answers but use more tokens and take longer. For higher reasoning efforts you may need to increase your max_completion_tokens to avoid empty responses (where all the tokens are used on reasoning).',
         default: 'none',
+        target_path: 'reasoning.effort',
         'x-order': 4
       },
       verbosity: {
@@ -97,6 +102,7 @@ export const MODEL_SCHEMAS: ModelSchema[] = [
         ],
         description: "Constrains the verbosity of the model's response. Lower values will result in more concise responses, while higher values will result in more verbose responses. Currently supported values are low, medium, and high. GPT-5 supports this parameter to help control whether answers are short and to the point or long and comprehensive.",
         default: 'medium',
+        target_path: 'text.verbosity',
         'x-order': 5
       },
       max_completion_tokens: {
@@ -106,6 +112,7 @@ export const MODEL_SCHEMAS: ModelSchema[] = [
         description: 'Maximum number of completion tokens to generate. For higher reasoning efforts you may need to increase your max_completion_tokens to avoid empty responses (where all the tokens are used on reasoning).',
         default: 16384,
         placeholder: '16384',
+        target_path: 'max_output_tokens',
         'x-order': 6
       }
     }
@@ -287,117 +294,60 @@ export const MODEL_SCHEMAS: ModelSchema[] = [
     }
   },
   {
-    id: 'google/gemini-3.1-pro-preview',
-    name: 'gemini-3.1-pro-preview',
-    publisher: 'Google DeepMind',
-    description: 'Google DeepMind 最新 3.1 架构原生多模态逻辑推理预览版旗舰模型（gemini-3.1-pro-preview），支持高达 2M Tokens 超长上下文、视听图文多模态深度解析、原生思维推导（Thinking）及复杂 STEM 编程开发。',
+    id: 'anthropic/claude-4.5-sonnet',
+    name: 'claude-4.5-sonnet',
+    publisher: 'Anthropic',
+    description: 'Anthropic 发布的 4.5 代智能旗舰模型（Claude 4.5 Sonnet），具备顶尖的多模态逻辑推理、精细化编程与深度分析能力，支持超长上下文与多模态解析。',
     category: 'Language Model',
     status: 'Hot',
-    runsCount: '19.2M runs',
-    avgTime: '~1.2s',
-    pricePerRun: '$0.0035 / 1K tokens',
+    runsCount: '21.5M runs',
+    avgTime: '~0.9s',
+    pricePerRun: '$0.003 / 1K tokens',
     properties: {
       prompt: {
         type: 'string',
         title: 'Prompt',
         widget: 'textarea',
-        description: '单轮对话用户指令或查询。如果配置了 messages 列表，此字段将作为初始输入协同处理。',
         default: '',
-        'x-order': 0
+        description: 'Input prompt',
+        'x-order': 0,
+        required: true
+      },
+      image: {
+        type: 'string',
+        title: 'Image',
+        format: 'uri',
+        widget: 'imageselect',
+        description: 'Optional input image. Images are priced as (width px * height px)/750 input tokens',
+        'x-order': 1
       },
       system_prompt: {
         type: 'string',
-        title: 'System Instruction',
+        title: 'System Prompt',
         widget: 'textarea',
-        description: '系统提示词（systemInstruction），用于设定模型人设、行文风格及回复约束。建议在此指定输出长度与格式要求。',
         default: '',
-        'x-order': 1
-      },
-      messages: {
-        type: 'array',
-        items: { type: 'object' },
-        title: 'Messages (Contents)',
-        widget: 'textarea',
-        description: '多轮对话消息列表（contents 数组），支持标准对话格式规范，例如 [{"role": "user", "content": "Hello"}]。',
-        default: [],
+        description: 'System prompt',
         'x-order': 2
       },
-      image_input: {
-        type: 'array',
-        items: { type: 'string', format: 'uri' },
-        title: 'Multimodal Media',
-        widget: 'multi-file',
-        description: '传入图像、视频或音频等多模态附件（inlineData/fileData），供原生多模态模型深度感知与推演。',
-        default: [],
+      max_tokens: {
+        type: 'integer',
+        title: 'Max Tokens',
+        widget: 'number',
+        default: 8192,
+        maximum: 64000,
+        minimum: 1024,
+        description: 'Maximum number of output tokens',
         'x-order': 3
       },
-      thinking_level: {
-        type: 'string',
-        title: 'thinkingLevel',
-        widget: 'select',
-        enum: ['HIGH', 'LOW'],
-        enumNames: [
-          'HIGH (Maximize reasoning)',
-          'LOW (Minimize latency)'
-        ],
-        description: '控制模型逻辑推导深度的专属配置（ThinkingLevel）。HIGH 适用于 STEM、复杂编程与多步推导；LOW 适用于降低响应延迟。',
-        default: 'HIGH',
+      max_image_resolution: {
+        type: 'number',
+        title: 'Max Image Resolution',
+        widget: 'number',
+        default: 0.5,
+        maximum: 2,
+        minimum: 0.001,
+        description: 'Maximum image resolution in megapixels. Scales down image before sending it to Claude, to save time and money.',
         'x-order': 4
-      },
-      temperature: {
-        type: 'number',
-        title: 'temperature',
-        widget: 'slider',
-        min: 0.0,
-        max: 2.0,
-        step: 0.05,
-        default: 1.0,
-        description: '控制采样随机度与发散性。取值范围 [0, 2.0]。较低的值更适合事实与代码生成。',
-        'x-order': 5
-      },
-      top_p: {
-        type: 'number',
-        title: 'topP',
-        widget: 'slider',
-        min: 0.0,
-        max: 1.0,
-        step: 0.05,
-        default: 0.95,
-        description: '核采样概率累积阈值。从概率总和达到 topP 的候选词集中进行采样。',
-        'x-order': 6
-      },
-      top_k: {
-        type: 'integer',
-        title: 'topK',
-        widget: 'slider',
-        min: 1,
-        max: 128,
-        step: 1,
-        default: 64,
-        description: '限制每次采样时最多考虑的候选词数量（Top-K sampling）。',
-        'x-order': 7
-      },
-      max_output_tokens: {
-        type: 'integer',
-        title: 'maxOutputTokens',
-        widget: 'input',
-        description: '生成文本与思维链推导（Thinking Tokens）的总上限。Gemini 3.1 Pro Preview 支持超长文本输出。',
-        default: 8192,
-        placeholder: '8192',
-        'x-order': 8
-      },
-      response_mime_type: {
-        type: 'string',
-        title: 'responseMimeType',
-        widget: 'select',
-        enum: ['text/plain', 'application/json'],
-        enumNames: [
-          'text/plain',
-          'application/json'
-        ],
-        description: '指定模型返回数据的 MIME 格式。设为 application/json 即可强制输出结构化 JSON 格式。',
-        default: 'text/plain',
-        'x-order': 9
       }
     }
   },

@@ -20,18 +20,25 @@ export const ApiDocsPanel: React.FC<ApiDocsPanelProps> = ({
   const isGpt54 = currentModel.id.toLowerCase().includes('gpt-5.4') || currentModel.name.toLowerCase().includes('gpt-5.4');
   const isGpt4o = currentModel.id.toLowerCase().includes('gpt-4o') || currentModel.name.toLowerCase().includes('gpt-4o');
   const isQwen = currentModel.id.toLowerCase().includes('qwen') || currentModel.name.toLowerCase().includes('qwen');
+  const isClaude = currentModel.id.toLowerCase().includes('claude') || currentModel.name.toLowerCase().includes('claude');
   const isGeminiLLM = (currentModel.id.toLowerCase().includes('gemini') || currentModel.name.toLowerCase().includes('gemini')) && currentModel.category === 'Language Model';
-  const isChatModel = currentModel.category === 'Language Model' || isGpt54 || isGpt4o || isQwen || isGeminiLLM;
+  const isChatModel = currentModel.category === 'Language Model' || isGpt54 || isGpt4o || isQwen || isClaude || isGeminiLLM;
+
+  const isResponsesApi = currentModel.api_client === 'openai-responses';
 
   let endpointUrl = 'https://api.replicate.com/v1/predictions';
-  if (isGpt54) {
+  if (isResponsesApi) {
+    endpointUrl = '/v1/responses';
+  } else if (isClaude) {
+    endpointUrl = 'https://api.anthropic.com/v1/messages';
+  } else if (isGpt54) {
     endpointUrl = '/v1/chat/completions';
   } else if (isGpt4o) {
     endpointUrl = 'https://api.openai.com/v1/chat/completions';
   } else if (isQwen) {
     endpointUrl = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
   } else if (isGeminiLLM) {
-    endpointUrl = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel.name || 'gemini-3.1-pro-preview'}:generateContent`;
+    endpointUrl = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel.name || 'gemini-2.5-pro'}:generateContent`;
   } else if (isChatModel) {
     endpointUrl = '/v1/chat/completions';
   }
@@ -56,6 +63,50 @@ export const ApiDocsPanel: React.FC<ApiDocsPanelProps> = ({
   });
 
   const getChatPayload = () => {
+    if (isResponsesApi) {
+      const instructions = cleanInputs.system_prompt || 'You are a helpful assistant.';
+      let inputMsg: any[] = [];
+      if (cleanInputs.messages && Array.isArray(cleanInputs.messages) && cleanInputs.messages.length > 0) {
+        inputMsg = cleanInputs.messages;
+      } else if (typeof cleanInputs.messages === 'string' && cleanInputs.messages.trim().startsWith('[')) {
+        try {
+          const parsed = JSON.parse(cleanInputs.messages);
+          if (Array.isArray(parsed)) inputMsg = parsed;
+        } catch {
+          inputMsg = [{ role: 'user', content: cleanInputs.messages }];
+        }
+      } else if (cleanInputs.prompt) {
+        inputMsg = [{ role: 'user', content: cleanInputs.prompt }];
+      } else {
+        inputMsg = [{ role: 'user', content: 'Explain quantum computing...' }];
+      }
+
+      const payload: Record<string, any> = {
+        model: currentModel.name || 'gpt-5.4',
+        instructions,
+        input: inputMsg,
+        stream: true,
+      };
+
+      Object.entries(currentModel.properties || {}).forEach(([key, prop]: [string, any]) => {
+        const val = cleanInputs[key];
+        if (val !== undefined && val !== null && val !== '') {
+          if (key === 'reasoning_effort' && val === 'none') return;
+          const targetPath = prop.target_path || prop.targetPath;
+          if (!targetPath || targetPath === 'instructions' || targetPath === 'input') return;
+          const parts = targetPath.split('.');
+          let curr = payload;
+          for (let i = 0; i < parts.length - 1; i++) {
+            curr[parts[i]] = curr[parts[i]] || {};
+            curr = curr[parts[i]];
+          }
+          const lastPart = parts[parts.length - 1];
+          curr[lastPart] = !isNaN(Number(val)) && (prop.type === 'integer' || prop.type === 'number') ? Number(val) : val;
+        }
+      });
+      return payload;
+    }
+
     const messages: any[] = [];
     if (cleanInputs.system_prompt) {
       messages.push({ role: 'system', content: cleanInputs.system_prompt });
@@ -112,7 +163,7 @@ export const ApiDocsPanel: React.FC<ApiDocsPanelProps> = ({
   const getSampleCode = () => {
     if (isChatModel) {
       if (isGeminiLLM) {
-        const geminiModelName = currentModel.name || 'gemini-3.1-pro-preview';
+        const geminiModelName = currentModel.name || 'gemini-2.5-pro';
         const promptText = cleanInputs.prompt || 'Explain the mathematical logic of game theory...';
         const geminiPayload = {
           contents: cleanInputs.messages?.length ? cleanInputs.messages : [{ role: 'user', parts: [{ text: promptText }] }],
@@ -158,7 +209,7 @@ const ai = new GoogleGenAI({
 });
 
 async function runGemini() {
-  console.log("Submitting Gemini 3.1 Pro Preview task...");
+  console.log("Submitting Gemini task...");
   const response = await ai.models.generateContent({
     model: '${geminiModelName}',
     contents: ${JSON.stringify(geminiPayload.contents, null, 4)},
@@ -170,6 +221,68 @@ async function runGemini() {
 runGemini();`;
           case 'JSON':
             return JSON.stringify(geminiPayload, null, 2);
+        }
+      }
+
+      if (isClaude) {
+        const claudeModelName = currentModel.name || 'claude-4.5-sonnet';
+        const userContent: any[] = [];
+        if (cleanInputs.image) {
+          userContent.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: '<base64_data>' } });
+        }
+        userContent.push({ type: 'text', text: cleanInputs.prompt || 'Explain quantum computing...' });
+
+        const claudePayload: Record<string, any> = {
+          model: claudeModelName,
+          max_tokens: cleanInputs.max_tokens ? Number(cleanInputs.max_tokens) : 8192,
+          messages: cleanInputs.messages?.length ? cleanInputs.messages : [{ role: 'user', content: userContent.length === 1 ? userContent[0].text : userContent }]
+        };
+        if (cleanInputs.system_prompt) {
+          claudePayload.system = cleanInputs.system_prompt;
+        }
+        if (cleanInputs.max_image_resolution !== undefined) {
+          claudePayload.max_image_resolution = Number(cleanInputs.max_image_resolution);
+        }
+
+        switch (selectedLang) {
+          case 'cURL':
+            return `curl -s -X POST \\
+  -H "x-api-key: $ANTHROPIC_API_KEY" \\
+  -H "anthropic-version: 2023-06-01" \\
+  -H "content-type: application/json" \\
+  "https://api.anthropic.com/v1/messages" \\
+  -d '${JSON.stringify(claudePayload, null, 2).replace(/\n/g, '\n  ')}'`;
+          case 'Python':
+            return `import os
+import anthropic
+
+# 初始化 Anthropic 官方 SDK 客户端
+client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+
+response = client.messages.create(
+    model="${claudeModelName}",
+    max_tokens=${claudePayload.max_tokens},${claudePayload.system ? `\n    system="${claudePayload.system.replace(/"/g, '\\"')}",` : ''}
+    messages=${JSON.stringify(claudePayload.messages, null, 4)}${claudePayload.max_image_resolution !== undefined ? `,\n    max_image_resolution=${claudePayload.max_image_resolution}` : ''}
+)
+
+print("Output Result:", response.content[0].text)`;
+          case 'Node.js':
+            return `import Anthropic from '@anthropic-ai/sdk';
+
+// 初始化 @anthropic-ai/sdk 官方客户端
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+});
+
+async function runClaude() {
+  console.log("Submitting Claude Sonnet task...");
+  const msg = await anthropic.messages.create(${JSON.stringify(claudePayload, null, 4)});
+  console.log("Result:", msg.content[0].text);
+}
+
+runClaude();`;
+          case 'JSON':
+            return JSON.stringify(claudePayload, null, 2);
         }
       }
 
@@ -499,7 +612,7 @@ runPrediction();`;
                         content: {
                           parts: [
                             {
-                              text: "结合多模态原生长逻辑推理与博弈论数学推演，Gemini 3.1 Pro Preview 构建了深度思维连贯决策模型..."
+                              text: "结合多模态原生长逻辑推理与复杂系统推导，Gemini 2.5 Pro 构建了深度思维决策模型..."
                             }
                           ],
                           role: "model"
@@ -514,7 +627,24 @@ runPrediction();`;
                       totalTokenCount: 424,
                       thoughtsTokenCount: 142
                     },
-                    modelVersion: currentModel.name || "gemini-3.1-pro-preview"
+                    modelVersion: currentModel.name || "gemini-2.5-pro"
+                  } : isClaude ? {
+                    id: "msg_01X9D7G2P4Q8L5K1M3N6J0H8",
+                    type: "message",
+                    role: "assistant",
+                    model: currentModel.name || "claude-4.5-sonnet",
+                    content: [
+                      {
+                        type: "text",
+                        text: "根据多模态逻辑推演与精细化编程分析，Claude 4.5 Sonnet 能够构建严密可靠的系统重构与决策模型..."
+                      }
+                    ],
+                    stop_reason: "end_turn",
+                    stop_sequence: null,
+                    usage: {
+                      input_tokens: 68,
+                      output_tokens: 356
+                    }
                   } : isChatModel ? {
                     id: isQwen ? "chatcmpl-42861a49-9c71-420a-8d18-91c6e1e80df7" : "chatcmpl-9A2X0B1C2D3E4F5G6H7I8J9K0L",
                     object: "chat.completion",

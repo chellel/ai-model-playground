@@ -211,12 +211,10 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
 
     switch (effectiveWidget) {
       case 'textarea': {
-        const rowsCount = field.rows ?? field.extra?.rows ?? 4;
         const maxLen = field.maxLength ?? field.extra?.maxLength;
         return (
           <textarea
-            className="w-full p-3 border border-gray-300 focus:border-black rounded-lg text-sm bg-white focus:outline-none transition font-sans shadow-2xs leading-relaxed font-mono"
-            rows={rowsCount}
+            className="w-full p-3 min-h-[110px] border border-gray-300 focus:border-black rounded-lg text-sm bg-white focus:outline-none transition font-sans shadow-2xs leading-relaxed font-mono resize-y"
             maxLength={maxLen}
             value={typeof value === 'object' && value !== null ? JSON.stringify(value, null, 2) : value}
             onChange={(e) => onChange(key, e.target.value)}

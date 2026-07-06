@@ -51,7 +51,6 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
     showToggle?: boolean;
     defaultEnabled?: boolean;
     inputMode?: 'numeric' | 'decimal' | 'text';
-    rows?: number;
     mediaType?: 'image' | 'video' | 'audio';
     maxCount?: number;
     maxSizeMb?: number;
@@ -59,6 +58,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
     base64?: boolean;
     maxDurationSeconds?: number;
     maxTotalDurationSeconds?: number;
+    target_path?: string;
     xOrder: number;
     required: boolean;
     visible?: boolean;
@@ -73,12 +73,12 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
     descriptionEn: '',
     placeholder: '',
     default: '',
+    target_path: '',
     format: '',
     enumList: [{ value: '', label: '', meta: '' }],
     showToggle: true,
     defaultEnabled: true,
     inputMode: 'numeric',
-    rows: 4,
     mediaType: 'image',
     maxCount: 1,
     maxSizeMb: 5,
@@ -133,15 +133,15 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
       status: 'enabled'
     },
     {
-      id: 'google/gemini-3.1-pro-preview',
-      name: 'gemini-3.1-pro-preview',
+      id: 'anthropic/claude-4.5-sonnet',
+      name: 'claude-4.5-sonnet',
       typeMatch: '精确',
       syncOfficial: '是',
-      desc: 'Google DeepMind 最新 3.1 架构多模态逻辑推理旗舰预览版',
-      supplier: 'Google DeepMind',
+      desc: 'Anthropic 4.5 代智能旗舰多模态推理与编码模型',
+      supplier: 'Anthropic',
       tag: 'llm',
-      endpoint: 'gemini / google-genai',
-      channel: '主站 vertex/sp/gemini(24)',
+      endpoint: 'anthropic / messages',
+      channel: '官方 API / bedrock / vertex(18)',
       status: 'enabled'
     },
     {
@@ -341,6 +341,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
         descriptionEn: prop.description_en || prop.descriptionEn || '',
         placeholder: prop.placeholder || extra.placeholder || '',
         default: prop.default ?? extra.defaultValue ?? '',
+        target_path: prop.target_path || prop.targetPath || extra.target_path || '',
         format: prop.format || prop.items?.format || (prop.widget === 'file' || prop.widget === 'multi-file' ? 'uri' : ''),
         enumList: initialEnumList,
         maxLength: prop.maxLength,
@@ -350,7 +351,6 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
         showToggle: prop.showToggle ?? extra.showToggle ?? true,
         defaultEnabled: prop.defaultEnabled ?? extra.defaultEnabled ?? true,
         inputMode: prop.inputMode ?? extra.inputMode ?? 'numeric',
-        rows: prop.rows ?? extra.rows ?? 4,
         mediaType: prop.mediaType ?? extra.mediaType ?? 'image',
         maxCount: prop.maxCount ?? extra.maxCount ?? 1,
         maxSizeMb: prop.maxSizeMb ?? extra.maxSizeMb ?? 5,
@@ -375,12 +375,12 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
         descriptionEn: '',
         placeholder: '',
         default: '',
+        target_path: '',
         format: '',
         enumList: [{ value: '', label: '', meta: '' }],
         showToggle: true,
         defaultEnabled: true,
         inputMode: 'numeric',
-        rows: 4,
         mediaType: 'image',
         maxCount: 1,
         maxSizeMb: 5,
@@ -452,8 +452,14 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
     if (widgetType === 'slider' && fieldForm.step !== undefined && !isNaN(fieldForm.step)) {
       newProp.step = Number(fieldForm.step);
     }
+    if (fieldForm.target_path?.trim()) {
+      newProp.target_path = fieldForm.target_path.trim();
+    }
 
     const extraObj: Record<string, any> = {};
+    if (fieldForm.target_path?.trim()) {
+      extraObj.target_path = fieldForm.target_path.trim();
+    }
 
     if (widgetType === 'slider') {
       newProp.min = Number(fieldForm.minimum ?? 0);
@@ -474,9 +480,6 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
       newProp.defaultEnabled = fieldForm.defaultEnabled;
       extraObj.inputMode = newProp.inputMode;
       extraObj.defaultEnabled = newProp.defaultEnabled;
-    } else if (widgetType === 'textarea') {
-      newProp.rows = Number(fieldForm.rows || 4);
-      extraObj.rows = newProp.rows;
     } else if (widgetType === 'imageselect' || widgetType === 'fileselect') {
       newProp.mediaType = fieldForm.mediaType || 'image';
       newProp.maxCount = Number(fieldForm.maxCount || 1);
@@ -1107,7 +1110,6 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
             <div className="flex-1 overflow-y-auto p-6 bg-white space-y-5">
               {/* Top Action Bar & Description */}
               <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-gray-100">
-                <p className="text-xs text-gray-500 font-medium">此处配置的控件将在多模态生成表单中作为动态 UI 控件实时渲染</p>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => {
@@ -1399,7 +1401,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
 
             <div className="overflow-y-auto pr-1 space-y-4 py-3 flex-1 text-xs">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
-                <div>
+                <div className="sm:col-span-2">
                   <label className="font-bold text-gray-700 block mb-1.5">参数键名 *</label>
                   <input
                     type="text"
@@ -1411,8 +1413,8 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                   />
                 </div>
 
-                <div className="flex items-center gap-2 sm:col-span-2">
-                  <label className="flex-1 flex items-center gap-2 cursor-pointer font-bold text-gray-800 bg-gray-50/80 px-3 py-2.5 rounded-xl border border-gray-200 h-[38px]">
+                <div>
+                  <label className="flex items-center gap-2 cursor-pointer font-bold text-gray-800 bg-gray-50/80 px-3 py-2.5 rounded-xl border border-gray-200 h-[38px]">
                     <input
                       type="checkbox"
                       checked={fieldForm.required}
@@ -1420,15 +1422,6 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                       className="rounded w-4 h-4 text-blue-600"
                     />
                     <span>必填字段</span>
-                  </label>
-                  <label className="flex-1 flex items-center gap-2 cursor-pointer font-bold text-gray-800 bg-emerald-50/60 px-3 py-2.5 rounded-xl border border-emerald-200/80 h-[38px]">
-                    <input
-                      type="checkbox"
-                      checked={fieldForm.visible !== false && fieldForm.status !== 'disabled'}
-                      onChange={e => setFieldForm({ ...fieldForm, visible: e.target.checked, status: e.target.checked ? 'enabled' : 'disabled' })}
-                      className="rounded w-4 h-4 text-emerald-600"
-                    />
-                    <span className="text-emerald-800">启用状态</span>
                   </label>
                 </div>
               </div>
@@ -1509,7 +1502,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
               {fieldForm.widget === 'slider' && (
                 <div className="p-4 bg-purple-50/70 rounded-xl border border-purple-200/80 space-y-3 shadow-2xs">
                   <div className="text-xs font-bold text-purple-900 flex items-center justify-between border-b border-purple-200/60 pb-2">
-                    <span>🎚️ 滑块专属自定义配置</span>
+                    <span>🎚️ 自定义配置</span>
                     <span className="text-[10px] font-normal text-purple-700">自动绑定 enable{'{Key}'} 开关机制</span>
                   </div>
                   <div className="grid grid-cols-3 gap-3">
@@ -1568,7 +1561,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
               {fieldForm.widget === 'number' && (
                 <div className="p-4 bg-cyan-50/70 rounded-xl border border-cyan-200/80 space-y-3 shadow-2xs">
                   <div className="text-xs font-bold text-cyan-900 flex items-center justify-between border-b border-cyan-200/60 pb-2">
-                    <span>🔢 数值输入框专属自定义配置</span>
+                    <span>🔢 自定义配置</span>
                     <span className="text-[10px] font-normal text-cyan-700">支持数值范围及提交控制配置</span>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -1611,8 +1604,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
               {fieldForm.widget === 'input' && (
                 <div className="p-4 bg-blue-50/70 rounded-xl border border-blue-200/80 space-y-3 shadow-2xs">
                   <div className="text-xs font-bold text-blue-900 flex items-center justify-between border-b border-blue-200/60 pb-2">
-                    <span>⌨️ 文本输入框专属自定义配置</span>
-                    <span className="text-[10px] font-normal text-blue-700">可配置文本类型与提交控制</span>
+                    <span>⌨️ 自定义配置</span>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
@@ -1646,28 +1638,17 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
               {fieldForm.widget === 'textarea' && (
                 <div className="p-4 bg-pink-50/70 rounded-xl border border-pink-200/80 space-y-3 shadow-2xs">
                   <div className="text-xs font-bold text-pink-900 flex items-center justify-between border-b border-pink-200/60 pb-2">
-                    <span>📝 多行文本专属自定义配置</span>
+                    <span>📝 自定义配置</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="font-bold text-gray-700 block mb-1">默认行数 (rows)</label>
-                      <input
-                        type="number"
-                        value={fieldForm.rows || 4}
-                        onChange={e => setFieldForm({ ...fieldForm, rows: Number(e.target.value) })}
-                        className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:border-pink-500 font-mono text-xs bg-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="font-bold text-gray-700 block mb-1">最大字数限制 (maxLength)</label>
-                      <input
-                        type="number"
-                        placeholder="例如 4000"
-                        value={fieldForm.maxLength ?? ''}
-                        onChange={e => setFieldForm({ ...fieldForm, maxLength: e.target.value ? Number(e.target.value) : undefined })}
-                        className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:border-pink-500 font-mono text-xs bg-white"
-                      />
-                    </div>
+                  <div>
+                    <label className="font-bold text-gray-700 block mb-1">最大字数限制 (maxLength)</label>
+                    <input
+                      type="number"
+                      placeholder="例如 4000"
+                      value={fieldForm.maxLength ?? ''}
+                      onChange={e => setFieldForm({ ...fieldForm, maxLength: e.target.value ? Number(e.target.value) : undefined })}
+                      className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:border-pink-500 font-mono text-xs bg-white"
+                    />
                   </div>
                 </div>
               )}
@@ -1676,8 +1657,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
               {(fieldForm.widget === 'fileselect' || fieldForm.widget === 'imageselect') && (
                 <div className="p-4 bg-amber-50/70 rounded-xl border border-amber-200/80 space-y-3 shadow-2xs">
                   <div className="text-xs font-bold text-amber-900 flex items-center justify-between border-b border-amber-200/60 pb-2">
-                    <span>🖼️ 文件上传专属自定义配置</span>
-                    <span className="text-[10px] font-normal text-amber-700">7项媒体控制字段</span>
+                    <span>🖼️ 自定义配置</span>
                   </div>
                   <div className="grid grid-cols-3 gap-3">
                     <div>
@@ -1767,7 +1747,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                 <div className="p-4 bg-indigo-50/70 rounded-xl border border-indigo-200/80 space-y-3 shadow-2xs">
                   <div className="flex items-center justify-between border-b border-indigo-200/60 pb-2">
                     <label className="font-bold text-indigo-900 text-xs flex items-center gap-1.5">
-                      <span>📋 {fieldForm.widget === 'select' ? '下拉选择' : '单选按钮组'} 选项子表自定义配置</span>
+                      <span>📋 自定义配置</span>
                     </label>
                     <span className="text-[11px] text-indigo-700 font-normal">支持绑定 value、label 及辅助信息 meta</span>
                   </div>
@@ -1866,6 +1846,19 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
               )}
 
               <div>
+                <label className="font-bold text-gray-700 block mb-1.5 flex items-center justify-between">
+                  <span>API 目标映射路径 (target_path)</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="例如: reasoning.effort 或 text.verbosity。选填，Responses API 等深层嵌套用点分割"
+                  value={fieldForm.target_path || ''}
+                  onChange={e => setFieldForm({ ...fieldForm, target_path: e.target.value })}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 bg-white font-mono text-xs"
+                />
+              </div>
+
+              <div>
                 <label className="font-bold text-gray-700 block mb-1.5">默认值</label>
                 {fieldForm.widget === 'switch' || fieldForm.type === 'boolean' ? (
                   <select
@@ -1911,7 +1904,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                 ) : (
                   <input
                     type="text"
-                    placeholder="例如: 16:9 或 720p"
+                    placeholder=""
                     value={String(fieldForm.default ?? '')}
                     onChange={e => setFieldForm({ ...fieldForm, default: e.target.value })}
                     className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 font-mono"
@@ -1977,7 +1970,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
               <div className="p-3.5 bg-amber-50 border border-amber-200/80 rounded-xl text-amber-900 space-y-1.5">
                 <div className="font-bold flex items-center gap-1.5 text-amber-800">
                   <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-                  <span>参数覆盖与暂存提醒</span>
+                  <span>参数覆盖提醒</span>
                 </div>
                 <p className="text-amber-700 leading-relaxed text-[11px]">
                   选择指定复制的模型后，系统将把该模型的<strong>全部表单参数配置与默认值</strong>一键导入并覆盖当前配置面板，确认无误后点击底部「提交」才会正式保存至系统。
@@ -1985,7 +1978,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
               </div>
 
               <div className="space-y-3">
-                <label className="font-bold text-gray-700 block">选择源模型 (复制其表单字段架构)</label>
+                <label className="font-bold text-gray-700 block">选择源模型</label>
                 <select
                   value={sourceModelId}
                   onChange={e => setSourceModelId(e.target.value)}
@@ -1996,35 +1989,11 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                     const propCount = Object.keys(m.properties || {}).length;
                     return (
                       <option key={m.id} value={m.id}>
-                        {m.name} ({m.publisher}) - {propCount} 个字段
+                        {m.name} ({m.publisher})
                       </option>
                     );
                   })}
                 </select>
-
-                {sourceModelId && (() => {
-                  const selectedM = models.find(m => m.id === sourceModelId);
-                  if (!selectedM) return null;
-                  const propCount = Object.keys(selectedM.properties || {}).length;
-                  return (
-                    <div className="p-3 bg-gray-50/80 border border-gray-200 rounded-xl flex items-center justify-between text-xs">
-                      <div className="flex flex-col gap-0.5">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-gray-800">{selectedM.name}</span>
-                          <span className="text-[10px] bg-white border border-gray-200 text-gray-600 px-1.5 py-0.2 rounded font-normal">
-                            {selectedM.publisher}
-                          </span>
-                        </div>
-                        {selectedM.description && (
-                          <span className="text-[11px] text-gray-500 line-clamp-1">{selectedM.description}</span>
-                        )}
-                      </div>
-                      <span className="font-mono font-bold text-purple-700 bg-purple-50 px-2.5 py-1 rounded-lg border border-purple-100 shrink-0">
-                        {propCount} 个字段
-                      </span>
-                    </div>
-                  );
-                })()}
               </div>
             </div>
 

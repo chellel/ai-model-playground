@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Copy, Check, Terminal, FileCode, Code } from 'lucide-react';
+import { MODEL_SCHEMAS } from '../data/models';
 
 interface CodeViewerProps {
   modelId: string;
@@ -22,26 +23,78 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
     }
   });
 
+  const currentModelSchema = MODEL_SCHEMAS.find(m => m.id === modelId);
+  const isResponsesApi = currentModelSchema?.api_client === 'openai-responses';
+
   const isGpt54 = modelId.toLowerCase().includes('gpt-5.4');
   const isGpt4o = modelId.toLowerCase().includes('gpt-4o');
   const isQwen = modelId.toLowerCase().includes('qwen');
+  const isClaude = modelId.toLowerCase().includes('claude');
   const isGeminiLLM = modelId.toLowerCase().includes('gemini') && (modelId.toLowerCase().includes('pro') || modelId.toLowerCase().includes('flash')) && !modelId.toLowerCase().includes('image');
-  const isChatModel = isGpt54 || isGpt4o || isQwen || isGeminiLLM || modelId.toLowerCase().includes('openai');
+  const isChatModel = isGpt54 || isGpt4o || isQwen || isClaude || isGeminiLLM || modelId.toLowerCase().includes('openai');
 
   let endpointUrl = 'https://api.replicate.com/v1/predictions';
-  if (isGpt54) {
+  if (isResponsesApi) {
+    endpointUrl = '/v1/responses';
+  } else if (isClaude) {
+    endpointUrl = 'https://api.anthropic.com/v1/messages';
+  } else if (isGpt54) {
     endpointUrl = '/v1/chat/completions';
   } else if (isGpt4o) {
     endpointUrl = 'https://api.openai.com/v1/chat/completions';
   } else if (isQwen) {
     endpointUrl = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
   } else if (isGeminiLLM) {
-    endpointUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelId.split('/').pop() || 'gemini-3.1-pro-preview'}:generateContent`;
+    endpointUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelId.split('/').pop() || 'gemini-2.5-pro'}:generateContent`;
   } else if (isChatModel) {
     endpointUrl = '/v1/chat/completions';
   }
 
   const getChatPayload = () => {
+    if (isResponsesApi) {
+      const instructions = cleanInputs.system_prompt || 'You are a helpful assistant.';
+      let inputMsg: any[] = [];
+      if (cleanInputs.messages && Array.isArray(cleanInputs.messages) && cleanInputs.messages.length > 0) {
+        inputMsg = cleanInputs.messages;
+      } else if (typeof cleanInputs.messages === 'string' && cleanInputs.messages.trim().startsWith('[')) {
+        try {
+          const parsed = JSON.parse(cleanInputs.messages);
+          if (Array.isArray(parsed)) inputMsg = parsed;
+        } catch {
+          inputMsg = [{ role: 'user', content: cleanInputs.messages }];
+        }
+      } else if (cleanInputs.prompt) {
+        inputMsg = [{ role: 'user', content: cleanInputs.prompt }];
+      } else {
+        inputMsg = [{ role: 'user', content: 'Explain quantum computing...' }];
+      }
+
+      const payload: Record<string, any> = {
+        model: modelId.split('/').pop() || 'gpt-5.4',
+        instructions,
+        input: inputMsg,
+        stream: true,
+      };
+
+      Object.entries(currentModelSchema?.properties || {}).forEach(([key, prop]: [string, any]) => {
+        const val = cleanInputs[key];
+        if (val !== undefined && val !== null && val !== '') {
+          if (key === 'reasoning_effort' && val === 'none') return;
+          const targetPath = prop.target_path || prop.targetPath;
+          if (!targetPath || targetPath === 'instructions' || targetPath === 'input') return;
+          const parts = targetPath.split('.');
+          let curr = payload;
+          for (let i = 0; i < parts.length - 1; i++) {
+            curr[parts[i]] = curr[parts[i]] || {};
+            curr = curr[parts[i]];
+          }
+          const lastPart = parts[parts.length - 1];
+          curr[lastPart] = !isNaN(Number(val)) && (prop.type === 'integer' || prop.type === 'number') ? Number(val) : val;
+        }
+      });
+      return payload;
+    }
+
     const messages: any[] = [];
     if (cleanInputs.system_prompt) {
       messages.push({ role: 'system', content: cleanInputs.system_prompt });
@@ -98,7 +151,7 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
   const generateCode = () => {
     if (isChatModel) {
       if (isGeminiLLM) {
-        const geminiModelName = modelId.split('/').pop() || 'gemini-3.1-pro-preview';
+        const geminiModelName = modelId.split('/').pop() || 'gemini-2.5-pro';
         const promptText = cleanInputs.prompt || 'Explain the mathematical logic of game theory...';
         const geminiPayload = {
           contents: cleanInputs.messages?.length ? cleanInputs.messages : [{ role: 'user', parts: [{ text: promptText }] }],
@@ -156,6 +209,68 @@ runGemini();`;
   -H "Content-Type: application/json" \\
   "https://generativelanguage.googleapis.com/v1beta/models/${geminiModelName}:generateContent?key=$GEMINI_API_KEY" \\
   -d '${JSON.stringify(geminiPayload, null, 2).replace(/\n/g, '\n  ')}'`;
+        }
+      }
+
+      if (isClaude) {
+        const claudeModelName = modelId.split('/').pop() || 'claude-4.5-sonnet';
+        const userContent: any[] = [];
+        if (cleanInputs.image) {
+          userContent.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: '<base64_data>' } });
+        }
+        userContent.push({ type: 'text', text: cleanInputs.prompt || 'Explain quantum computing...' });
+
+        const claudePayload: Record<string, any> = {
+          model: claudeModelName,
+          max_tokens: cleanInputs.max_tokens ? Number(cleanInputs.max_tokens) : 8192,
+          messages: cleanInputs.messages?.length ? cleanInputs.messages : [{ role: 'user', content: userContent.length === 1 ? userContent[0].text : userContent }]
+        };
+        if (cleanInputs.system_prompt) {
+          claudePayload.system = cleanInputs.system_prompt;
+        }
+        if (cleanInputs.max_image_resolution !== undefined) {
+          claudePayload.max_image_resolution = Number(cleanInputs.max_image_resolution);
+        }
+
+        switch (activeTab) {
+          case 'JSON':
+            return JSON.stringify(claudePayload, null, 2);
+
+          case 'Python':
+            return `import os
+import anthropic
+
+client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+
+response = client.messages.create(
+    model="${claudeModelName}",
+    max_tokens=${claudePayload.max_tokens},${claudePayload.system ? `\n    system="${claudePayload.system.replace(/"/g, '\\"')}",` : ''}
+    messages=${JSON.stringify(claudePayload.messages, null, 4)}${claudePayload.max_image_resolution !== undefined ? `,\n    max_image_resolution=${claudePayload.max_image_resolution}` : ''}
+)
+
+print(response.content[0].text)`;
+
+          case 'Node.js':
+            return `import Anthropic from '@anthropic-ai/sdk';
+
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+});
+
+async function runClaude() {
+  const msg = await anthropic.messages.create(${JSON.stringify(claudePayload, null, 4)});
+  console.log(msg.content[0].text);
+}
+
+runClaude();`;
+
+          case 'cURL':
+            return `curl -s -X POST \\
+  -H "x-api-key: $ANTHROPIC_API_KEY" \\
+  -H "anthropic-version: 2023-06-01" \\
+  -H "content-type: application/json" \\
+  "https://api.anthropic.com/v1/messages" \\
+  -d '${JSON.stringify(claudePayload, null, 2).replace(/\n/g, '\n  ')}'`;
         }
       }
 
