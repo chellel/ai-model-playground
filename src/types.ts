@@ -16,7 +16,11 @@ export type WidgetType =
 export interface SchemaProperty {
   type: 'string' | 'integer' | 'number' | 'boolean' | 'file' | 'array';
   title?: string;
+  title_en?: string;
+  titleEn?: string;
   description?: string;
+  description_en?: string;
+  descriptionEn?: string;
   widget?: WidgetType;
   default?: any;
   help?: string;
@@ -24,7 +28,18 @@ export interface SchemaProperty {
   min?: number;
   max?: number;
   step?: number;
-  options?: string[];
+  showToggle?: boolean;
+  defaultEnabled?: boolean;
+  inputMode?: 'numeric' | 'decimal' | 'text';
+  rows?: number;
+  mediaType?: 'image' | 'video' | 'audio';
+  maxCount?: number;
+  maxSizeMb?: number;
+  acceptExtensions?: string[] | string;
+  base64?: boolean;
+  maxDurationSeconds?: number;
+  maxTotalDurationSeconds?: number;
+  options?: any[];
   enum?: (string | number)[];
   enumNames?: string[];
   placeholder?: string;
@@ -34,6 +49,8 @@ export interface SchemaProperty {
   minimum?: number;
   maximum?: number;
   'x-order'?: number;
+  extra?: Record<string, any>;
+  [key: string]: any;
 }
 
 export interface ModelSchema {

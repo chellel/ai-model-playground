@@ -205,21 +205,25 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
       field.type === 'file' || field.format === 'uri' ? 'fileselect' :
       field.type === 'array' && (field.items?.format === 'uri' || field.format === 'uri' || key.includes('image') || key.includes('video') || key.includes('file')) ? 'fileselect' :
       field.type === 'boolean' ? 'switch' :
-      field.type === 'integer' || field.type === 'number' ? 'input' :
-      undefined
+      field.type === 'integer' || field.type === 'number' ? 'number' :
+      'input'
     );
 
     switch (effectiveWidget) {
-      case 'textarea':
+      case 'textarea': {
+        const rowsCount = field.rows ?? field.extra?.rows ?? 4;
+        const maxLen = field.maxLength ?? field.extra?.maxLength;
         return (
           <textarea
             className="w-full p-3 border border-gray-300 focus:border-black rounded-lg text-sm bg-white focus:outline-none transition font-sans shadow-2xs leading-relaxed font-mono"
-            rows={4}
+            rows={rowsCount}
+            maxLength={maxLen}
             value={typeof value === 'object' && value !== null ? JSON.stringify(value, null, 2) : value}
             onChange={(e) => onChange(key, e.target.value)}
             placeholder={field.placeholder || field.description || `Enter ${key}...`}
           />
         );
+      }
 
       case 'select': {
         const optionsList = field.options || field.enum || [];
@@ -232,12 +236,14 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
           >
             {optionsList.map((opt, idx) => {
               const optVal = typeof opt === 'object' && opt !== null && (opt as any).value !== undefined ? String((opt as any).value) : String(opt);
-              const optLabel = typeof opt === 'object' && opt !== null && (opt as any).label !== undefined
+              const rawLabel = typeof opt === 'object' && opt !== null && (opt as any).label !== undefined
                 ? String((opt as any).label)
                 : (Array.isArray(enumNames) && enumNames[idx] ? String(enumNames[idx]) : optVal);
+              const optMeta = typeof opt === 'object' && opt !== null && (opt as any).meta ? String((opt as any).meta) : undefined;
+              const displayLabel = optMeta ? `${rawLabel} (${optMeta})` : rawLabel;
               return (
                 <option key={`${optVal}-${idx}`} value={optVal}>
-                  {optLabel || optVal}
+                  {displayLabel || optVal}
                 </option>
               );
             })}
@@ -246,15 +252,16 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
       }
 
       case 'radiogroup': {
-        const optionsList = field.enum || field.options || [];
+        const optionsList = field.options || field.enum || [];
         const enumNames = field.enumNames;
         return (
           <div className="flex flex-wrap gap-2 pt-1">
             {optionsList.map((opt, idx) => {
               const optVal = typeof opt === 'object' && opt !== null && (opt as any).value !== undefined ? String((opt as any).value) : String(opt);
-              const optLabel = typeof opt === 'object' && opt !== null && (opt as any).label !== undefined
+              const rawLabel = typeof opt === 'object' && opt !== null && (opt as any).label !== undefined
                 ? String((opt as any).label)
                 : (Array.isArray(enumNames) && enumNames[idx] ? String(enumNames[idx]) : optVal);
+              const optMeta = typeof opt === 'object' && opt !== null && (opt as any).meta ? String((opt as any).meta) : undefined;
               const isSelected = String(value) === optVal;
               return (
                 <button
@@ -272,7 +279,12 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
                   }`}>
                     {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
                   </span>
-                  <span>{optLabel || optVal}</span>
+                  <span>{rawLabel || optVal}</span>
+                  {optMeta && (
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${isSelected ? 'bg-white/20 text-gray-200' : 'bg-gray-100 text-gray-500'}`}>
+                      {optMeta}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -281,9 +293,9 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
       }
 
       case 'slider': {
-        const minVal = field.minimum ?? field.min ?? 0;
-        const maxVal = field.maximum ?? field.max ?? 100;
-        const stepVal = field.step ?? 1;
+        const minVal = field.minimum ?? field.min ?? field.extra?.min ?? 0;
+        const maxVal = field.maximum ?? field.max ?? field.extra?.max ?? 100;
+        const stepVal = field.step ?? field.extra?.step ?? 1;
         return (
           <div className="space-y-2 p-3 bg-gray-50/80 rounded-lg border border-gray-200/60">
             <div className="flex items-center justify-between">
@@ -330,27 +342,31 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
         );
 
       case 'input':
-      case 'number':
-        if (field.type === 'integer' || field.type === 'number') {
+      case 'number': {
+        const inputModeVal = field.inputMode ?? field.extra?.inputMode;
+        if (effectiveWidget === 'number' || field.type === 'integer' || field.type === 'number') {
           return (
             <input
               type="number"
+              inputMode={inputModeVal || 'numeric'}
               className="w-full p-2.5 border border-gray-300 focus:border-black rounded-lg text-sm font-mono bg-white focus:outline-none transition shadow-2xs"
-              value={value}
+              value={value ?? ''}
               placeholder={field.placeholder || `例如: ${field.default ?? ''}`}
-              onChange={(e) => onChange(key, Number(e.target.value))}
+              onChange={(e) => onChange(key, e.target.value === '' ? '' : Number(e.target.value))}
             />
           );
         }
         return (
           <input
             type="text"
+            inputMode={inputModeVal || 'text'}
             className="w-full p-2.5 border border-gray-300 focus:border-black rounded-lg text-sm bg-white focus:outline-none transition shadow-2xs"
-            value={value}
+            value={value ?? ''}
             placeholder={field.placeholder || `例如: ${field.default ?? ''}`}
             onChange={(e) => onChange(key, e.target.value)}
           />
         );
+      }
 
       case 'fileselect':
       case 'imageselect':
@@ -422,6 +438,10 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
     <div className="space-y-6">
       {Object.keys(properties)
         .filter((key) => !isChatModel || (key !== 'prompt' && key !== 'messages'))
+        .filter((key) => {
+          const field = properties[key] as SchemaProperty;
+          return field.visible !== false && field.status !== 'disabled';
+        })
         .sort((a, b) => ((properties[a] as SchemaProperty)['x-order'] ?? 99) - ((properties[b] as SchemaProperty)['x-order'] ?? 99))
         .map((key) => {
           const field = properties[key] as SchemaProperty;

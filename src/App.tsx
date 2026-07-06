@@ -12,6 +12,7 @@ import { SchemaEditorModal } from './components/SchemaEditorModal';
 import { AdminConsole } from './components/AdminConsole';
 import { ApiTokenSelector } from './components/ApiTokenSelector';
 import { ChatPlayground } from './components/ChatPlayground';
+import { ApiDocsPanel } from './components/ApiDocsPanel';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<'playground' | 'console'>('playground');
@@ -215,11 +216,7 @@ export default function App() {
                 ) : (
                   <CodeViewer
                     modelId={currentModel.id}
-                    formData={
-                      currentModel.category === 'Language Model'
-                        ? Object.fromEntries(Object.entries(formData).filter(([k]) => k !== 'prompt' && k !== 'messages'))
-                        : formData
-                    }
+                    formData={formData}
                     activeTab={activeTab}
                   />
                 )}
@@ -251,6 +248,14 @@ export default function App() {
               )}
             </div>
           </div>
+        )}
+
+        {activeSection === 'API' && (
+          <ApiDocsPanel
+            currentModel={currentModel}
+            formData={formData}
+            onBackToPlayground={() => setActiveSection('Playground')}
+          />
         )}
 
         {activeSection === 'History' && (

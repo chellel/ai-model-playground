@@ -95,7 +95,13 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
         reasoningTime = formData.reasoning_effort === 'high' || formData.reasoning_effort === 'xhigh' ? '3.8s' : '1.4s';
         tokens = 612;
       } else {
-        replyContent = `我是基于 OpenAI 最新多模态架构的 ${currentModel.name} 模型。我已就绪，能够根据您左侧配置的 System Prompt 及参数（Reasoning: ${formData.reasoning_effort || 'none'}，Verbosity: ${formData.verbosity || 'medium'}）为您实时输出解答。\n\n您可以随时向我提出任何编程、逻辑推演或文本处理需求！`;
+        if (currentModel.id.includes('qwen')) {
+          replyContent = `我是阿里云通义千问旗下的 ${currentModel.name} 旗舰模型。我已开启深度思考与多轮对话就绪，能够根据您左侧配置的参数（Temperature: ${formData.temperature ?? 0.85}，Top P: ${formData.top_p ?? 0.8}）为您实时输出准确且富有逻辑的推演与解答！\n\n您可以随时向我提出任何逻辑推演、编程开发或多语言文本分析需求！`;
+        } else if (currentModel.id.includes('gemini')) {
+          replyContent = `我是 Google DeepMind 旗下的 ${currentModel.name} 原生多模态推理旗舰模型。我已开启长逻辑思维推导（Thinking Level: ${formData.thinking_level ?? 'HIGH'}）与 2M 超长上下文处理就绪！\n\n您可以随时向我提出任何代码系统架构设计、复杂 STEM 数学推导、长文理解或视听多模态分析需求！`;
+        } else {
+          replyContent = `我是基于 ${currentModel.publisher} 架构的 ${currentModel.name} 模型。我已就绪，能够根据您左侧配置的 System Prompt 及参数为您实时输出解答。\n\n您可以随时向我提出任何编程、逻辑推演或多模态文本处理需求！`;
+        }
       }
 
       const botMsg: ChatMessage = {
@@ -221,7 +227,7 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
             </div>
             <div className="bg-white px-4 py-3 rounded-2xl border border-gray-200/80 text-xs text-gray-600 font-mono flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-purple-600 animate-ping" />
-              <span>{formData.reasoning_effort && formData.reasoning_effort !== 'none' ? `正在进行 CoT 深入推理推导 (Effort: ${formData.reasoning_effort})...` : 'GPT-5.4 正在极速对齐响应...'}</span>
+              <span>{formData.thinking_level ? `正在进行 Gemini 思维链深度逻辑推导 (Thinking: ${formData.thinking_level})...` : formData.reasoning_effort && formData.reasoning_effort !== 'none' ? `正在进行 CoT 深入推理推导 (Effort: ${formData.reasoning_effort})...` : `${currentModel.name} 正在快速推演生成响应...`}</span>
             </div>
           </div>
         )}

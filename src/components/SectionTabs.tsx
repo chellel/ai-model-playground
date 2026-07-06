@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, History as HistoryIcon, DollarSign, HelpCircle, Layers } from 'lucide-react';
+import { Play, History as HistoryIcon, DollarSign, HelpCircle, Layers, Code } from 'lucide-react';
 
 interface SectionTabsProps {
   activeSection: string;
@@ -12,6 +12,7 @@ export const SectionTabs: React.FC<SectionTabsProps> = ({
 }) => {
   const tabs = [
     { id: 'Playground', label: 'Playground', icon: Play },
+    { id: 'API', label: 'API', icon: Code },
     { id: 'History', label: 'History', icon: HistoryIcon },
     { id: 'Pricing', label: 'Pricing', icon: DollarSign },
     { id: 'FAQs', label: 'FAQs', icon: HelpCircle },
